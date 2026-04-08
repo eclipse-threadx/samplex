@@ -4,3 +4,15 @@
 [submodule "MXChip/AZ3166/deps/lib/netxduo"]
 	path = MXChip/AZ3166/deps/lib/netxduo
 	url = https://github.com/eclipse-threadx/netxduo.git
+[submodule "libs/threadx"]
+	path = libs/threadx
+	url = https://github.com/eclipse-threadx/threadx.git
+[submodule "libs/netxduo"]
+	path = libs/netxduo
+	url = https://github.com/eclipse-threadx/netxduo.git
+[submodule "libs/usbx"]
+	path = libs/usbx
+	url = https://github.com/eclipse-threadx/usbx.git
+[submodule "libs/filex"]
+	path = libs/filex
+	url = https://github.com/eclipse-threadx/filex.git
