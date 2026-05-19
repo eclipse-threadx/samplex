@@ -166,16 +166,17 @@ setup_wsl_usbipd() {
         warn "Attach output: ${ATTACH_OUT}"
         return 0
     elif echo "${ATTACH_OUT}" | grep -qi "VBoxUsbMon"; then
-        warn "VirtualBox USB filter driver (VBoxUsbMon) is blocking usbipd."
-        warn "Run ONE of the following in an ELEVATED PowerShell on Windows:"
+        warn "usbipd VBoxUsbMon driver is missing or broken."
+        warn "Note: this is usbipd-win's own internal driver, not VirtualBox."
+        warn "Repair usbipd-win in an ELEVATED PowerShell on Windows:"
         warn ""
-        warn "  Option A (disable VBoxUsbMon, keep VirtualBox):"
-        warn "    sc stop VBoxUSBMon"
-        warn "    sc config VBoxUSBMon start=disabled"
+        warn "    winget uninstall usbipd"
+        warn "    winget install usbipd"
         warn ""
-        warn "  Option B (repair VirtualBox): run the VBox installer and choose Repair."
+        warn "After reinstalling, re-bind and re-run this script:"
+        warn "    usbipd bind --hardware-id ${OPELLA_VID}:${OPELLA_PID}"
         warn ""
-        warn "After applying the fix, re-plug the probe and re-run this script."
+        warn "If VirtualBox IS installed, try Option B: run the VBox installer and choose Repair."
         return 0
     elif echo "${ATTACH_OUT}" | grep -qiE "error|fail"; then
         warn "Attach failed: ${ATTACH_OUT}"
