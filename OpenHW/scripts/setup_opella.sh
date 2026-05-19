@@ -165,6 +165,18 @@ setup_wsl_usbipd() {
         warn "This usually means a required flag is missing."
         warn "Attach output: ${ATTACH_OUT}"
         return 0
+    elif echo "${ATTACH_OUT}" | grep -qi "VBoxUsbMon"; then
+        warn "VirtualBox USB filter driver (VBoxUsbMon) is blocking usbipd."
+        warn "Run ONE of the following in an ELEVATED PowerShell on Windows:"
+        warn ""
+        warn "  Option A (disable VBoxUsbMon, keep VirtualBox):"
+        warn "    sc stop VBoxUSBMon"
+        warn "    sc config VBoxUSBMon start=disabled"
+        warn ""
+        warn "  Option B (repair VirtualBox): run the VBox installer and choose Repair."
+        warn ""
+        warn "After applying the fix, re-plug the probe and re-run this script."
+        return 0
     elif echo "${ATTACH_OUT}" | grep -qiE "error|fail"; then
         warn "Attach failed: ${ATTACH_OUT}"
         warn "Check that the probe is plugged in and bound."
