@@ -50,14 +50,22 @@ core-v/
 
 ### Required tools
 
+Run `../../scripts/install_deps.sh` to install all dependencies in one step:
+
+```bash
+bash ../../scripts/install_deps.sh
+```
+
+Or install individually:
+
 | Tool | Minimum version | Notes |
 |------|----------------|-------|
-| `riscv64-unknown-elf-gcc` | 13.x | `apt install gcc-riscv64-unknown-elf` |
+| `riscv64-unknown-elf-gcc` | 13.x | `apt install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf` |
 | CMake | 3.20 | `apt install cmake` |
 | Ninja | 1.10 | `apt install ninja-build` |
-| OpenOCD | 0.11 (RISC-V) | See [BSP README](../../libs/threadx/ports/risc-v32/gnu/example_build/core_v_mcu/README.md) |
-| GDB | multiarch | Included with the toolchain |
-| minicom (or similar) | any | For the UART console |
+| OpenOCD | 0.12 | `apt install openocd` |
+| GDB | any multiarch | `apt install gdb-multiarch` — Ubuntu does not ship `riscv64-unknown-elf-gdb` |
+| minicom (or similar) | any | `apt install minicom` — for the UART console |
 
 ---
 
