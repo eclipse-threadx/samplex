@@ -15,8 +15,21 @@
 #include "tx_api.h"
 #include "FreeRTOS.h"
 #include "system_core_v_mcu.h"
+#include "uart_driver.h"
 #include "libs/cli/include/cli.h"
 #include "app_commands.h"
+
+#define _TX_STR(x)  #x
+#define TX_STR(x)   _TX_STR(x)
+#define TX_VERSION_STRING \
+    "v" TX_STR(THREADX_MAJOR_VERSION) \
+    "." TX_STR(THREADX_MINOR_VERSION) \
+    "." TX_STR(THREADX_PATCH_VERSION) \
+    "." TX_STR(THREADX_BUILD_VERSION)
+
+static const char tx_banner[] =
+    "\r\nEclipse ThreadX for OpenHW CORE-V MCU " TX_VERSION_STRING "\r\n"
+    "Copyright (c) 2026 Eclipse ThreadX Contributors\r\n\r\n";
 
 /* Initialize the BSP then enter the ThreadX kernel. */
 int main(void)
@@ -32,6 +45,8 @@ void tx_application_define(void *first_unused_memory)
     UINT status;
 
     (void)first_unused_memory;
+
+    uart_write_str(UART_ID_CONSOLE, tx_banner);
 
     status = tx_freertos_init();
     if (status != TX_SUCCESS)
