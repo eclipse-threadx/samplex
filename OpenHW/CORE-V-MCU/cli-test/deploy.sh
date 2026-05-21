@@ -116,7 +116,12 @@ done
 info "OpenOCD is ready."
 
 GDB_INIT_FILE="/tmp/gdb_deploy_cli_test.gdb"
-printf 'set confirm off\ntarget extended-remote localhost:3333\nfile %s\nload\n'     "${ELF}" > "${GDB_INIT_FILE}"
+printf 'set confirm off
+set remotetimeout 60
+target extended-remote localhost:3333
+file %s
+load
+'     "${ELF}" > "${GDB_INIT_FILE}"
 
 if [ "${OPT_DEBUG}" -eq 0 ]; then
     info "Flashing and running (detached) ..."
