@@ -20,6 +20,14 @@
 
 #define UART_ID_CONSOLE      0U
 #define DEBUG_UART           0U
+
+/*
+ * ADT7420 temperature calibration offset (units: tenths of a degree Celsius).
+ * The on-board sensor reads warm due to FPGA self-heating on the Nexys A7.
+ * Measured offset on this board: -3.7 C (-37 in x10 units).
+ * Set to 0 to disable calibration.
+ */
+#define TEMP_CALIBRATION_X10 (-37)
 #define FEATURE_CLI_FILESYSTEM 0
 #define QAI_CHILKAT          0
 

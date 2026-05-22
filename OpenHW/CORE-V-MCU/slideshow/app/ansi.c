@@ -13,7 +13,15 @@
  ***************************************************************************/
 
 #include "ansi.h"
+#include "SDKConfig.h"
+#include "uart_driver.h"
 #include "uart_io.h"
+
+static int s_term_rows = 24;
+static int s_term_cols = 80;
+
+int terminal_rows(void) { return s_term_rows; }
+int terminal_cols(void) { return s_term_cols; }
 
 void ansi_clear(void)
 {
@@ -52,4 +60,74 @@ void ansi_bold(void)
 void ansi_reset_attr(void)
 {
     uio_puts("[0m");
+}
+
+int terminal_probe_size(void)
+{
+    char buf[24];
+    int i, c, rows, cols, j;
+    long timeout;
+
+    /* flush any pending RX bytes from prior input */
+    while (uart_read_byte(UART_ID_CONSOLE) >= 0) {}
+
+    /* move cursor to large position (terminal clamps to actual size),
+     * then request cursor position report (CPR) */
+    uio_puts("\x1B[999;999H\x1B[6n");
+
+    /* read response: ESC [ rows ; cols R  (e.g. "\x1B[24;80R") */
+    i = 0;
+    timeout = 500000L;
+    while (i < (int)(sizeof(buf) - 1) && timeout-- > 0L)
+    {
+        c = uart_read_byte(UART_ID_CONSOLE);
+        if (c < 0)
+        {
+            continue;
+        }
+        if (i == 0 && c != 0x1B)
+        {
+            continue;
+        }
+        buf[i++] = (char)c;
+        if (c == 'R' && i > 4)
+        {
+            break;
+        }
+    }
+    buf[i] = '\0';
+
+    ansi_home();
+
+    if (timeout <= 0L || i < 5)
+    {
+        return -1;
+    }
+
+    /* parse: ESC [ <rows> ; <cols> R */
+    rows = 0;
+    cols = 0;
+    j = 2; /* skip ESC and '[' */
+    while (j < i && buf[j] >= '0' && buf[j] <= '9')
+    {
+        rows = rows * 10 + (buf[j++] - '0');
+    }
+    if (j < i && buf[j] == ';')
+    {
+        j++;
+    }
+    while (j < i && buf[j] >= '0' && buf[j] <= '9')
+    {
+        cols = cols * 10 + (buf[j++] - '0');
+    }
+
+    if (rows > 0)
+    {
+        s_term_rows = rows;
+    }
+    if (cols > 0)
+    {
+        s_term_cols = cols;
+    }
+    return 0;
 }

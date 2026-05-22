@@ -34,25 +34,35 @@ void screen_threadx_render(void)
 {
     ULONG ticks;
     ULONG tenths;
+    int start_col;
+    int logo_width = 41;
+
+    start_col = (terminal_cols() - logo_width) / 2 + 1;
+    if (start_col < 1)
+    {
+        start_col = 1;
+    }
 
     ansi_clear_screen();
     ansi_bold();
-    ansi_goto(1, 18);
-    uio_puts("THREADX");
+    ansi_goto(2, start_col);
+    uio_puts("  ________                        ___  __");
+    ansi_goto(3, start_col);
+    uio_puts(" /_  __/ /_  ________  ____ _____/ / |/ /");
+    ansi_goto(4, start_col);
+    uio_puts("  / / / __ \\/ ___/ _ \\/ __ `/ __  /|   / ");
+    ansi_goto(5, start_col);
+    uio_puts(" / / / / / / /  /  __/ /_/ / /_/ //   |  ");
+    ansi_goto(6, start_col);
+    uio_puts("/_/ /_/ /_/_/   \\___/\\__,_/\\__,_//_/|_|  ");
     ansi_reset_attr();
 
-    ansi_goto(3, 6);  uio_puts("##### #   # ####  #####  ###  ####  #   #");
-    ansi_goto(4, 6);  uio_puts("  #   #   # #   # #     #   # #   # ##  #");
-    ansi_goto(5, 6);  uio_puts("  #   ##### ####  ###   ##### #   # # # #");
-    ansi_goto(6, 6);  uio_puts("  #   #   # #  #  #     #   # #   # #  ##");
-    ansi_goto(7, 6);  uio_puts("  #   #   # #   # ##### #   # ####  #   #");
-
-    ansi_goto(10, 4);
+    ansi_goto(8, start_col);
     uio_puts(tx_banner);
 
     ticks = tx_time_get();
     tenths = ticks / 10U;
-    ansi_goto(13, 4);
+    ansi_goto(11, start_col);
     uio_puts("System uptime: ");
     uio_put_udec((uint32_t)(tenths / 10U));
     uio_putc('.');

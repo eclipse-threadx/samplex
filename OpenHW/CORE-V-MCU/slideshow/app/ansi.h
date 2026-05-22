@@ -22,4 +22,11 @@ void ansi_goto(int row, int col);
 void ansi_bold(void);
 void ansi_reset_attr(void);
 
+/* Query actual terminal dimensions via ANSI CPR (ESC[6n).
+ * Falls back silently to 80x24 on timeout.
+ * Returns 0 on success, -1 on timeout (defaults still set). */
+int terminal_probe_size(void);
+int terminal_rows(void);
+int terminal_cols(void);
+
 #endif /* ANSI_H */
