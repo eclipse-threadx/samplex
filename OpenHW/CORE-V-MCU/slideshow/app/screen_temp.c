@@ -37,7 +37,7 @@ static void print_temp_value(int32_t value_x10)
     uio_put_udec(mag / 10U);
     uio_putc('.');
     uio_put_udec(mag % 10U);
-    uio_puts("Â°C");
+    uio_puts("°C");
 }
 
 void screen_temp_render(void)
@@ -96,7 +96,7 @@ void screen_temp_render(void)
     big_digits_render_tenths(current_x10, 5, 10);
 
     ansi_goto(11, 20);
-    uio_puts("Â°C  Current room temperature");
+    uio_puts("°C  Current room temperature");
 
     ansi_goto(15, 8);
     uio_puts("Min: ");
