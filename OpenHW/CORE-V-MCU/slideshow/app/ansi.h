@@ -29,4 +29,7 @@ int terminal_probe_size(void);
 int terminal_rows(void);
 int terminal_cols(void);
 
+/* Print str centered horizontally on row. */
+void ansi_center_str(int row, const char *str);
+
 #endif /* ANSI_H */

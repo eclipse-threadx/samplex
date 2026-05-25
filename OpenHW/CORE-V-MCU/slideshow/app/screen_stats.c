@@ -112,60 +112,40 @@ void screen_stats_render(void)
 
     ansi_clear_screen();
     ansi_bold();
-    ansi_goto(1, 12);
-    uio_puts("THREADX SYSTEM STATISTICS");
+    ansi_center_str(1, "THREADX SYSTEM STATISTICS");
     ansi_reset_attr();
 
-    ansi_goto(4, 6);
-    uio_puts("Uptime: ");
-    uio_put_udec((uint32_t)days);
-    uio_puts("d ");
-    if (hours < 10U) uio_putc('0');
-    uio_put_udec((uint32_t)hours);
-    uio_putc(':');
-    if (minutes < 10U) uio_putc('0');
-    uio_put_udec((uint32_t)minutes);
-    uio_putc(':');
-    if (seconds < 10U) uio_putc('0');
-    uio_put_udec((uint32_t)seconds);
+    /* Content block is ~38 cols wide; use dynamic left margin */
+    {
+        int m = (terminal_cols() - 38) / 2 + 1;
+        if (m < 1) m = 1;
 
-    ansi_goto(5, 6);
-    uio_puts("Tick count: ");
-    uio_put_udec((uint32_t)tick_count);
+        ansi_goto(4, m);
+        uio_puts("Uptime: ");
+        uio_put_udec((uint32_t)days);
+        uio_puts("d ");
+        if (hours < 10U) uio_putc('0');
+        uio_put_udec((uint32_t)hours);
+        uio_putc(':');
+        if (minutes < 10U) uio_putc('0');
+        uio_put_udec((uint32_t)minutes);
+        uio_putc(':');
+        if (seconds < 10U) uio_putc('0');
+        uio_put_udec((uint32_t)seconds);
 
-    ansi_goto(6, 6);
-    uio_puts("TX version: ");
-    uio_puts(TX_VERSION_STRING);
+        ansi_goto(5, m);  uio_puts("Tick count: "); uio_put_udec((uint32_t)tick_count);
+        ansi_goto(6, m);  uio_puts("TX version: "); uio_puts(TX_VERSION_STRING);
 
-    ansi_goto(8, 6);
-    uio_puts("Created threads   : ");
-    uio_put_udec((uint32_t)_tx_thread_created_count);
-    ansi_goto(9, 6);
-    uio_puts("Running threads   : ");
-    uio_put_udec((current != TX_NULL) ? 1U : 0U);
-    ansi_goto(10, 6);
-    uio_puts("Ready threads     : ");
-    uio_put_udec(ready_count);
-    ansi_goto(11, 6);
-    uio_puts("Suspended threads : ");
-    uio_put_udec(suspended_count);
-    ansi_goto(12, 6);
-    uio_puts("Completed threads : ");
-    uio_put_udec(completed_count);
-    ansi_goto(13, 6);
-    uio_puts("Terminated threads: ");
-    uio_put_udec(terminated_count);
+        ansi_goto(8,  m); uio_puts("Created threads   : "); uio_put_udec((uint32_t)_tx_thread_created_count);
+        ansi_goto(9,  m); uio_puts("Running threads   : "); uio_put_udec((current != TX_NULL) ? 1U : 0U);
+        ansi_goto(10, m); uio_puts("Ready threads     : "); uio_put_udec(ready_count);
+        ansi_goto(11, m); uio_puts("Suspended threads : "); uio_put_udec(suspended_count);
+        ansi_goto(12, m); uio_puts("Completed threads : "); uio_put_udec(completed_count);
+        ansi_goto(13, m); uio_puts("Terminated threads: "); uio_put_udec(terminated_count);
 
-    ansi_goto(15, 6);
-    uio_puts("Slideshow thread name : ");
-    uio_puts((name != TX_NULL) ? name : "(unnamed)");
-    ansi_goto(16, 6);
-    uio_puts("Slideshow state       : ");
-    uio_puts(thread_state_name(state));
-    ansi_goto(17, 6);
-    uio_puts("Slideshow priority    : ");
-    uio_put_udec(priority);
-    ansi_goto(18, 6);
-    uio_puts("Slideshow run count   : ");
-    uio_put_udec((uint32_t)run_count);
+        ansi_goto(15, m); uio_puts("Slideshow thread name : "); uio_puts((name != TX_NULL) ? name : "(unnamed)");
+        ansi_goto(16, m); uio_puts("Slideshow state       : "); uio_puts(thread_state_name(state));
+        ansi_goto(17, m); uio_puts("Slideshow priority    : "); uio_put_udec(priority);
+        ansi_goto(18, m); uio_puts("Slideshow run count   : "); uio_put_udec((uint32_t)run_count);
+    }
 }

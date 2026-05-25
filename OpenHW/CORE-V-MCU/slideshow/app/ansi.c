@@ -131,3 +131,23 @@ int terminal_probe_size(void)
     }
     return 0;
 }
+
+void ansi_center_str(int row, const char *str)
+{
+    int len = 0;
+    int col;
+    const char *p = str;
+
+    while (*p)
+    {
+        len++;
+        p++;
+    }
+    col = (terminal_cols() - len) / 2 + 1;
+    if (col < 1)
+    {
+        col = 1;
+    }
+    ansi_goto(row, col);
+    uio_puts(str);
+}

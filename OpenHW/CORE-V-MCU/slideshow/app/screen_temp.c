@@ -48,18 +48,19 @@ void screen_temp_render(void)
     static int16_t last_x10;
     int16_t current_x10;
     const char *trend;
+    int big_w;
+    int big_col;
+    int stat_col;
 
     ansi_clear_screen();
     ansi_bold();
-    ansi_goto(1, 28);
-    uio_puts("TEMPERATURE");
+    ansi_center_str(1, "TEMPERATURE");
     ansi_reset_attr();
 
     current_x10 = (int16_t)(temp_read_celsius_x10() + (int16_t)TEMP_CALIBRATION_X10);
     if (current_x10 == INT16_MIN)
     {
-        ansi_goto(10, 28);
-        uio_puts("Sensor unavailable");
+        ansi_center_str(10, "Sensor unavailable");
         return;
     }
 
@@ -93,12 +94,24 @@ void screen_temp_render(void)
         trend = "= Stable";
     }
 
-    big_digits_render_tenths(current_x10, 5, 10);
+    big_w = big_digits_width_tenths(current_x10);
+    big_col = (terminal_cols() - big_w) / 2 + 1;
+    if (big_col < 1)
+    {
+        big_col = 1;
+    }
+    big_digits_render_tenths(current_x10, 5, big_col);
 
-    ansi_goto(11, 20);
-    uio_puts("°C  Current room temperature");
+    /* "\xB0C  Current room temperature" = 28 chars */
+    ansi_center_str(11, "°""C  Current room temperature");
 
-    ansi_goto(15, 8);
+    /* "Min: XX.X\xB0C   Max: XX.X\xB0C   Trend: = Stable" ~= 46 chars */
+    stat_col = (terminal_cols() - 46) / 2 + 1;
+    if (stat_col < 1)
+    {
+        stat_col = 1;
+    }
+    ansi_goto(13, stat_col);
     uio_puts("Min: ");
     print_temp_value(min_x10);
     uio_puts("   Max: ");

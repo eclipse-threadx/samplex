@@ -38,6 +38,7 @@ static const slide_fn_t s_slides[SLIDE_COUNT] = {
 
 static void slideshow_show(unsigned int slide_index, uint32_t elapsed_ticks)
 {
+    terminal_probe_size();
     s_slides[slide_index]();
     progress_bar_render(terminal_rows() - 1, elapsed_ticks, SLIDE_PERIOD_TICKS, PROGRESS_WIDTH);
 }
@@ -49,8 +50,6 @@ void slideshow_thread_entry(ULONG arg)
     key_event_t key;
 
     TX_PARAMETER_NOT_USED(arg);
-
-    terminal_probe_size();
 
     slide_index = 0U;
     elapsed_ticks = 0U;

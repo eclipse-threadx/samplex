@@ -26,46 +26,47 @@
     "." TX_STR(THREADX_PATCH_VERSION) \
     "." TX_STR(THREADX_BUILD_VERSION)
 
-static const char tx_banner[] =
-    "Eclipse ThreadX for OpenHW CORE-V MCU " TX_VERSION_STRING "\r\n"
+static const char tx_banner_1[] =
+    "Eclipse ThreadX for OpenHW CORE-V MCU " TX_VERSION_STRING;
+static const char tx_banner_2[] =
     "Copyright (c) 2026 Eclipse ThreadX Contributors";
 
 void screen_threadx_render(void)
 {
     ULONG ticks;
     ULONG tenths;
-    int start_col;
-    int logo_width = 41;
+    int logo_col;
 
-    start_col = (terminal_cols() - logo_width) / 2 + 1;
-    if (start_col < 1)
+    logo_col = (terminal_cols() - 41) / 2 + 1;
+    if (logo_col < 1)
     {
-        start_col = 1;
+        logo_col = 1;
     }
 
     ansi_clear_screen();
     ansi_bold();
-    ansi_goto(2, start_col);
+    ansi_goto(2, logo_col);
     uio_puts("  ________                        ___  __");
-    ansi_goto(3, start_col);
+    ansi_goto(3, logo_col);
     uio_puts(" /_  __/ /_  ________  ____ _____/ / |/ /");
-    ansi_goto(4, start_col);
+    ansi_goto(4, logo_col);
     uio_puts("  / / / __ \\/ ___/ _ \\/ __ `/ __  /|   / ");
-    ansi_goto(5, start_col);
+    ansi_goto(5, logo_col);
     uio_puts(" / / / / / / /  /  __/ /_/ / /_/ //   |  ");
-    ansi_goto(6, start_col);
+    ansi_goto(6, logo_col);
     uio_puts("/_/ /_/ /_/_/   \\___/\\__,_/\\__,_//_/|_|  ");
     ansi_reset_attr();
 
-    ansi_goto(8, start_col);
-    uio_puts(tx_banner);
+    ansi_center_str(8, tx_banner_1);
+    ansi_center_str(9, tx_banner_2);
 
     ticks = tx_time_get();
     tenths = ticks / 10U;
-    ansi_goto(11, start_col);
+    /* estimate total line width: "System uptime: 99999.9 s" = 25 */
+    ansi_goto(11, (terminal_cols() - 25) / 2 + 1);
     uio_puts("System uptime: ");
     uio_put_udec((uint32_t)(tenths / 10U));
     uio_putc('.');
     uio_put_udec((uint32_t)(tenths % 10U));
-    uio_puts(" seconds");
+    uio_puts(" s");
 }

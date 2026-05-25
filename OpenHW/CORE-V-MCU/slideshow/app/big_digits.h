@@ -20,4 +20,7 @@
 void big_digits_render(int32_t value, int start_row, int start_col);
 void big_digits_render_tenths(int32_t value_x10, int start_row, int start_col);
 
+/* Returns the rendered column width (for centering) of big_digits_render_tenths. */
+int big_digits_width_tenths(int32_t value_x10);
+
 #endif /* BIG_DIGITS_H */
