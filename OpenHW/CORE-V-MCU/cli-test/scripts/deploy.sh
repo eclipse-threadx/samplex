@@ -24,7 +24,7 @@
 #   --debug             After loading, stop at main and leave GDB attached
 #                       (default: run free and exit GDB).
 #   --elf <path>        Override the ELF to flash
-#                       (default: build/core_v_mcu_slideshow.elf).
+#                       (default: build/core_v_mcu_cli_test.elf).
 #   --openocd-cfg <p>   Override the OpenOCD config file.
 #
 # Prerequisites:
@@ -35,20 +35,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Prefer a bare-metal RISC-V GDB; fall back to gdb-multiarch (Ubuntu apt default)
 if command -v riscv64-unknown-elf-gdb >/dev/null 2>&1; then
     GDB="riscv64-unknown-elf-gdb"
 elif command -v gdb-multiarch >/dev/null 2>&1; then
     GDB="gdb-multiarch"
 else
-    GDB="riscv64-unknown-elf-gdb"
+    GDB="riscv64-unknown-elf-gdb"  # will produce a clear error below
 fi
-OPENOCD_LOG="${SCRIPT_DIR}/.openocd_slideshow.log"
-GDB_INIT_FILE="${SCRIPT_DIR}/.gdb_deploy_slideshow.gdb"
+OPENOCD_LOG="/tmp/openocd_cli_test.log"
 OPENOCD_PID=""
 OPENOCD_TIMEOUT=10
 
-DEFAULT_ELF="${SCRIPT_DIR}/build/core_v_mcu_slideshow.elf"
-DEFAULT_CFG="${SCRIPT_DIR}/../../libs/threadx/ports/risc-v32/gnu/example_build/core_v_mcu/openocd-nexys-Ashling-Opella-LD.cfg"
+DEFAULT_ELF="${PROJECT_DIR}/build/core_v_mcu_cli_test.elf"
+DEFAULT_CFG="${PROJECT_DIR}/../../libs/threadx/ports/risc-v32/gnu/example_build/core_v_mcu/openocd-nexys-Ashling-Opella-LD.cfg"
 
 OPT_BUILD=0
 OPT_DEBUG=0
@@ -115,8 +116,13 @@ while ! grep -q "Ready for Remote Connections" "${OPENOCD_LOG}" 2>/dev/null; do
 done
 info "OpenOCD is ready."
 
-printf 'set confirm off\nset remotetimeout 60\nfile %s\ntarget extended-remote localhost:3333\nload\n' \
-    "${ELF}" > "${GDB_INIT_FILE}"
+GDB_INIT_FILE="/tmp/gdb_deploy_cli_test.gdb"
+printf 'set confirm off
+set remotetimeout 60
+file %s
+target extended-remote localhost:3333
+load
+'     "${ELF}" > "${GDB_INIT_FILE}"
 
 if [ "${OPT_DEBUG}" -eq 0 ]; then
     info "Flashing and running (detached) ..."

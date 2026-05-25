@@ -104,7 +104,9 @@ cli-test/
 ├── SDKConfig.h             Platform constants (UART ID, feature flags)
 ├── tx_user.h               ThreadX compile-time tunables
 ├── libc_shim.c             Freestanding C runtime helpers
-├── build.sh                One-shot build script
+├── scripts/
+│   ├── build.sh            One-shot build script
+│   └── deploy.sh           Flash-and-run / debug helper
 └── README.md               This file
 ```
 
@@ -201,7 +203,7 @@ git submodule update --init OpenHW/libs/threadx
 
 ```bash
 cd samplex-fd/OpenHW/CORE-V-MCU/cli-test
-bash build.sh
+bash scripts/build.sh
 ```
 
 Outputs:
@@ -244,13 +246,13 @@ These steps are identical to the BSP demo.  Full details are in the
 
 ```bash
 # Flash and run:
-bash deploy.sh
+bash scripts/deploy.sh
 
 # Build first, then flash:
-bash deploy.sh --build
+bash scripts/deploy.sh --build
 
 # Flash and stop at main for an interactive debug session:
-bash deploy.sh --debug
+bash scripts/deploy.sh --debug
 ```
 
 > **First time only:** run `bash ../../scripts/setup_opella.sh` to install the udev
@@ -346,7 +348,7 @@ static const struct cli_cmd_entry app_main_menu[] = {
 };
 ```
 
-3. Rebuild with `bash build.sh`.
+3. Rebuild with `bash scripts/build.sh`.
 
 ### Command entry macros
 
@@ -484,7 +486,7 @@ After running, **re-plug the probe**.  On WSL, re-run the script after each WSL 
 ### 11.2 `deploy.sh` — flash and run
 
 ```bash
-bash deploy.sh [--build] [--debug] [--elf <path>] [--openocd-cfg <path>]
+bash scripts/deploy.sh [--build] [--debug] [--elf <path>] [--openocd-cfg <path>]
 ```
 
 | Flag | Effect |

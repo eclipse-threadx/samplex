@@ -85,10 +85,10 @@ accordingly.  If the probe times out it falls back to 80 × 24.
 
 ```bash
 cd OpenHW/CORE-V-MCU/slideshow
-bash build.sh
+bash scripts/build.sh
 ```
 
-`build.sh` runs a clean CMake + Ninja build and prints section sizes on
+`scripts/build.sh` runs a clean CMake + Ninja build and prints section sizes on
 success.  The output artefacts are placed in `build/`:
 
 | File | Description |
@@ -105,19 +105,19 @@ Connect the Nexys A7 USB-JTAG and USB-UART cables, then:
 
 ```bash
 # Build and flash in one step
-bash deploy.sh --build
+bash scripts/deploy.sh --build
 
 # Flash a pre-built ELF (default)
-bash deploy.sh
+bash scripts/deploy.sh
 
 # Flash and halt at main() for interactive GDB debugging
-bash deploy.sh --debug
+bash scripts/deploy.sh --debug
 
 # Override the ELF path
-bash deploy.sh --elf /path/to/custom.elf
+bash scripts/deploy.sh --elf /path/to/custom.elf
 
 # Override the OpenOCD config
-bash deploy.sh --openocd-cfg /path/to/board.cfg
+bash scripts/deploy.sh --openocd-cfg /path/to/board.cfg
 ```
 
 The script:
@@ -277,8 +277,9 @@ All user-tunable constants live in `SDKConfig.h` and `app/slideshow.h`:
 ```
 slideshow/
 ├── CMakeLists.txt          CMake build definition
-├── build.sh                Clean-build helper
-├── deploy.sh               Flash-and-run / debug helper
+├── scripts/
+│   ├── build.sh            Clean-build helper
+│   └── deploy.sh           Flash-and-run / debug helper
 ├── SDKConfig.h             Board/sensor configuration
 ├── tx_user.h               ThreadX user configuration overrides
 ├── FreeRTOSConfig.h        Stub (required by compatibility layer)

@@ -64,8 +64,8 @@ configuration instructions.
 Run `setup_opella.sh` (in `OpenHW/libs/threadx/ports/risc-v32/gnu/example_build/core_v_mcu/`)
 once to install the udev rules for the Opella-LD probe.
 
-Each demo has its own `build.sh` (clean CMake/Ninja build) and `deploy.sh`
-(flash via OpenOCD + GDB) scripts.  Both accept `--build`, `--debug`,
+Each demo has its own `scripts/build.sh` (clean CMake/Ninja build) and
+`scripts/deploy.sh` (flash via OpenOCD + GDB) scripts.  Both accept `--build`, `--debug`,
 `--elf`, and `--openocd-cfg` options.
 
 ---

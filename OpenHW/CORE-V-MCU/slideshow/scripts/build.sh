@@ -15,9 +15,10 @@
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="${SCRIPT_DIR}/build"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BUILD_DIR="${PROJECT_DIR}/build"
 rm -rf "${BUILD_DIR}"
-cmake -S "${SCRIPT_DIR}" -B "${BUILD_DIR}"     -G Ninja     -DCMAKE_TOOLCHAIN_FILE="${SCRIPT_DIR}/../../libs/threadx/cmake/riscv64-gcc-rv32imc.cmake"     -DCMAKE_BUILD_TYPE=Debug
+cmake -S "${PROJECT_DIR}" -B "${BUILD_DIR}"     -G Ninja     -DCMAKE_TOOLCHAIN_FILE="${PROJECT_DIR}/../../libs/threadx/cmake/riscv64-gcc-rv32imc.cmake"     -DCMAKE_BUILD_TYPE=Debug
 cmake --build "${BUILD_DIR}"
 echo "=== Sections ==="
 riscv64-unknown-elf-size "${BUILD_DIR}/core_v_mcu_slideshow.elf"
