@@ -115,7 +115,7 @@ while ! grep -q "Ready for Remote Connections" "${OPENOCD_LOG}" 2>/dev/null; do
 done
 info "OpenOCD is ready."
 
-printf 'set confirm off\nset remotetimeout 60\ntarget extended-remote localhost:3333\nfile %s\nload\n' \
+printf 'set confirm off\nset remotetimeout 60\nfile %s\ntarget extended-remote localhost:3333\nload\n' \
     "${ELF}" > "${GDB_INIT_FILE}"
 
 if [ "${OPT_DEBUG}" -eq 0 ]; then

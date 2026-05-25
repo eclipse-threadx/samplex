@@ -118,8 +118,8 @@ info "OpenOCD is ready."
 GDB_INIT_FILE="/tmp/gdb_deploy_cli_test.gdb"
 printf 'set confirm off
 set remotetimeout 60
-target extended-remote localhost:3333
 file %s
+target extended-remote localhost:3333
 load
 '     "${ELF}" > "${GDB_INIT_FILE}"
 
