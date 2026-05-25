@@ -62,6 +62,11 @@ void ansi_reset_attr(void)
     uio_puts("[0m");
 }
 
+void ansi_green(void)
+{
+    uio_puts("[32m");
+}
+
 int terminal_probe_size(void)
 {
     char buf[24];

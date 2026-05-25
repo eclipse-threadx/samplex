@@ -21,6 +21,7 @@ void ansi_clear_screen(void);
 void ansi_goto(int row, int col);
 void ansi_bold(void);
 void ansi_reset_attr(void);
+void ansi_green(void);
 
 /* Query actual terminal dimensions via ANSI CPR (ESC[6n).
  * Falls back silently to 80x24 on timeout.

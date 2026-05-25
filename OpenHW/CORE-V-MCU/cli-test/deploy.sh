@@ -125,15 +125,16 @@ load
 
 if [ "${OPT_DEBUG}" -eq 0 ]; then
     info "Flashing and running (detached) ..."
-    printf 'continue\ndetach\nquit\n' >> "${GDB_INIT_FILE}"
+    printf 'monitor reset run\ndisconnect\nquit\n' >> "${GDB_INIT_FILE}"
+    info "ELF: ${ELF}"
+    riscv64-unknown-elf-size "${ELF}"
     "${GDB}" --batch --command="${GDB_INIT_FILE}"
     info "Flash complete. Application is running on the target."
     info "Serial console: minicom -b 115200 -D /dev/ttyUSBx"
 else
     info "Flashing and stopping at main for interactive debug ..."
     printf 'break main\ncontinue\n' >> "${GDB_INIT_FILE}"
+    info "ELF: ${ELF}"
+    riscv64-unknown-elf-size "${ELF}"
     "${GDB}" --command="${GDB_INIT_FILE}"
 fi
-
-info "ELF: ${ELF}"
-riscv64-unknown-elf-size "${ELF}"
