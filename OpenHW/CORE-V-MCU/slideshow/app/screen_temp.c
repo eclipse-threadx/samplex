@@ -37,7 +37,7 @@ static void print_temp_value(int32_t value_x10)
     uio_put_udec(mag / 10U);
     uio_putc('.');
     uio_put_udec(mag % 10U);
-    uio_puts("ï¿½C");
+    uio_puts("°C");
 }
 
 void screen_temp_render(void)
@@ -111,7 +111,7 @@ void screen_temp_render(void)
     big_digits_render_tenths(current_x10, 5, big_col);
 
     /* "\xB0C  Current room temperature" = 28 chars */
-    ansi_center_str(11, "ï¿½""C  Current room temperature");
+    ansi_center_str(11, "°""C  Current room temperature");
 
     /* "Min: XX.X\xB0C   Max: XX.X\xB0C   Trend: = Stable" ~= 46 chars */
     stat_col = (terminal_cols() - 46) / 2 + 1;
