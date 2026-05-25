@@ -120,7 +120,7 @@ printf 'set confirm off\nset remotetimeout 60\ntarget extended-remote localhost:
 
 if [ "${OPT_DEBUG}" -eq 0 ]; then
     info "Flashing and running (detached) ..."
-    printf 'monitor reset run\ndisconnect\nquit\n' >> "${GDB_INIT_FILE}"
+    printf 'monitor resume\ndisconnect\nquit\n' >> "${GDB_INIT_FILE}"
     info "ELF: ${ELF}"
     riscv64-unknown-elf-size "${ELF}"
     "${GDB}" --batch --command="${GDB_INIT_FILE}"
