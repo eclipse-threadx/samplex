@@ -37,7 +37,7 @@ static void print_temp_value(int32_t value_x10)
     uio_put_udec(mag / 10U);
     uio_putc('.');
     uio_put_udec(mag % 10U);
-    uio_puts("°C");
+    uio_puts("ï¿½C");
 }
 
 void screen_temp_render(void)
@@ -57,11 +57,19 @@ void screen_temp_render(void)
     ansi_center_str(1, "TEMPERATURE");
     ansi_reset_attr();
 
-    current_x10 = (int16_t)(temp_read_celsius_x10() + (int16_t)TEMP_CALIBRATION_X10);
-    if (current_x10 == INT16_MIN)
     {
-        ansi_center_str(10, "Sensor unavailable");
-        return;
+        int16_t raw_x10 = temp_read_celsius_x10();
+        if (raw_x10 == INT16_MIN)
+        {
+            ansi_center_str(10, "Sensor unavailable");
+            return;
+        }
+        if (raw_x10 == 0)
+        {
+            ansi_center_str(10, "Sensor warming up...");
+            return;
+        }
+        current_x10 = (int16_t)(raw_x10 + (int16_t)TEMP_CALIBRATION_X10);
     }
 
     if (initialized == 0)
@@ -103,7 +111,7 @@ void screen_temp_render(void)
     big_digits_render_tenths(current_x10, 5, big_col);
 
     /* "\xB0C  Current room temperature" = 28 chars */
-    ansi_center_str(11, "°""C  Current room temperature");
+    ansi_center_str(11, "ï¿½""C  Current room temperature");
 
     /* "Min: XX.X\xB0C   Max: XX.X\xB0C   Trend: = Stable" ~= 46 chars */
     stat_col = (terminal_cols() - 46) / 2 + 1;
