@@ -18,5 +18,5 @@
 	url = https://github.com/eclipse-threadx/filex.git
 [submodule "OpenHW/libs/threadx"]
 	path = OpenHW/libs/threadx
-	url = git@github.com:fdesbiens/threadx-fd.git
-	branch = core-v-mcu
+	url = https://github.com/eclipse-threadx/threadx.git
+	branch = dev
