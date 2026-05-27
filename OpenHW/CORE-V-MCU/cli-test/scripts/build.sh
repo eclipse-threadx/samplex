@@ -26,7 +26,7 @@ BUILD_DIR="${PROJECT_DIR}/build"
 rm -rf "${BUILD_DIR}"
 cmake -S "${PROJECT_DIR}" -B "${BUILD_DIR}" \
     -G Ninja \
-    -DCMAKE_TOOLCHAIN_FILE="${PROJECT_DIR}/../../libs/threadx/cmake/riscv-none-elf-rv32imc.cmake" \
+    -DCMAKE_TOOLCHAIN_FILE="${PROJECT_DIR}/../../../libs/threadx/cmake/riscv-none-elf-rv32imc.cmake" \
     -DCMAKE_BUILD_TYPE=Debug
 cmake --build "${BUILD_DIR}"
 echo "=== Sections ==="

@@ -17,7 +17,7 @@ project(core_v_mcu_cli_test LANGUAGES C ASM)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-set(THREADX_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/threadx")
+set(THREADX_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/threadx")
 set(BSP_ROOT "${THREADX_ROOT}/ports/risc-v32/gnu/example_build/core_v_mcu")
 set(TX_USER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/tx_user.h")
 set(THREADX_ARCH "risc-v32")
