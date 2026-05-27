@@ -22,5 +22,7 @@ CTestTestfile.cmake
 *.map
 #*.a
 *.htm
+*.gdb
+*.log
 shared/lib/netxduo/*
 shared/lib/threadx/*
