@@ -1,0 +1,31 @@
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'adapter driver' not 'interface'
+DEPRECATED! use 'ftdi device_desc' not 'ftdi_device_desc'
+DEPRECATED! use 'ftdi vid_pid' not 'ftdi_vid_pid'
+DEPRECATED! use 'ftdi tdo_sample_edge' not 'ftdi_tdo_sample_edge'
+DEPRECATED! use 'ftdi layout_init' not 'ftdi_layout_init'
+DEPRECATED! use 'ftdi channel' not 'ftdi_channel'
+DEPRECATED! use 'ftdi layout_signal' not 'ftdi_layout_signal'
+DEPRECATED! use 'ftdi layout_signal' not 'ftdi_layout_signal'
+DEPRECATED! use 'ftdi layout_signal' not 'ftdi_layout_signal'
+DEPRECATED! use 'ftdi layout_signal' not 'ftdi_layout_signal'
+DEPRECATED! use 'ftdi layout_signal' not 'ftdi_layout_signal'
+DEPRECATED! use 'ftdi layout_signal' not 'ftdi_layout_signal'
+DEPRECATED! use 'adapter speed' not 'adapter_khz'
+Warn : `riscv set_prefer_sba` is deprecated. Please use `riscv set_mem_access` instead.
+Info : clock speed 1000 kHz
+Info : JTAG tap: riscv.cpu tap/device found: 0x10001c05 (mfg: 0x602 (Open HW Group), part: 0x0001, ver: 0x1)
+Info : datacount=2 progbufsize=8
+Info : Examined RISC-V core; found 1 harts
+Info :  hart 0: XLEN=32, misa=0x40001104
+Info : starting gdb server for riscv.cpu on 3333
+Info : Listening on port 3333 for gdb connections
+Ready for Remote Connections
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Info : accepting 'gdb' connection on tcp/3333
+Info : dropped 'gdb' connection
+shutdown command invoked

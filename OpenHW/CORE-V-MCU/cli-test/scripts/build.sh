@@ -14,15 +14,21 @@
 #  ***************************************************************************/
 
 set -e
+
+XPACK_GCC_DIR=/opt/xpack-riscv-none-elf-gcc-15.2.0-1
+if [ -d "${XPACK_GCC_DIR}/bin" ]; then
+    export PATH="${XPACK_GCC_DIR}/bin:${PATH}"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
 rm -rf "${BUILD_DIR}"
 cmake -S "${PROJECT_DIR}" -B "${BUILD_DIR}" \
     -G Ninja \
-    -DCMAKE_TOOLCHAIN_FILE="${PROJECT_DIR}/../../libs/threadx/cmake/riscv64-gcc-rv32imc.cmake" \
+    -DCMAKE_TOOLCHAIN_FILE="${PROJECT_DIR}/../../libs/threadx/cmake/riscv-none-elf-rv32imc.cmake" \
     -DCMAKE_BUILD_TYPE=Debug
 cmake --build "${BUILD_DIR}"
 echo "=== Sections ==="
-riscv64-unknown-elf-size "${BUILD_DIR}/core_v_mcu_cli_test.elf"
+riscv-none-elf-size "${BUILD_DIR}/core_v_mcu_cli_test.elf"
 echo "=== Done ==="

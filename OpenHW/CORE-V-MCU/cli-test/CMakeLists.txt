@@ -32,7 +32,6 @@ target_include_directories(freertos-threadx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/
 target_compile_options(freertos-threadx PRIVATE -ffreestanding -ffunction-sections -fdata-sections)
 
 set(BSP_SOURCES
-    ${BSP_ROOT}/bsp/clz.c
     ${BSP_ROOT}/bsp/irq.c
     ${BSP_ROOT}/bsp/timer_irq.c
     ${BSP_ROOT}/bsp/fll.c

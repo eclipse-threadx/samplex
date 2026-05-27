@@ -30,7 +30,6 @@ add_subdirectory(${THREADX_ROOT} ${CMAKE_BINARY_DIR}/threadx)
 target_include_directories(threadx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compat_include ${BSP_ROOT}/include)
 
 set(BSP_SOURCES
-    ${BSP_ROOT}/bsp/clz.c
     ${BSP_ROOT}/bsp/irq.c
     ${BSP_ROOT}/bsp/timer_irq.c
     ${BSP_ROOT}/bsp/fll.c
