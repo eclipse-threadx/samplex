@@ -23,10 +23,14 @@ set(TX_USER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/tx_user.h")
 set(THREADX_ARCH "risc-v32")
 set(THREADX_TOOLCHAIN "gnu")
 
+message(STATUS "Toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+message(STATUS "C compiler:     ${CMAKE_C_COMPILER}")
+
 add_subdirectory(${THREADX_ROOT} ${CMAKE_BINARY_DIR}/threadx)
 target_include_directories(threadx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compat_include ${BSP_ROOT}/include)
 
 set(BSP_SOURCES
+    ${BSP_ROOT}/bsp/clz.c
     ${BSP_ROOT}/bsp/irq.c
     ${BSP_ROOT}/bsp/timer_irq.c
     ${BSP_ROOT}/bsp/fll.c
