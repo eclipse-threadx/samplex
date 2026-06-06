@@ -1,4 +1,4 @@
-#  Copyright (c) 2026-present Eclipse ThreadX contributors
+#  Copyright (c) 2026 Eclipse ThreadX contributors
 # 
 #  This program and the accompanying materials are made available 
 #  under the terms of the MIT license which is available at
@@ -70,11 +70,17 @@ CleanTemp
 Write-Host "[OK] CMSIS Device files copied"
 Write-Host ""
 
-# 3. Reuse existing CMSIS Include headers from disk (AZ3166)
-Write-Host "[INFO] Copying generic CMSIS Core Include headers from MXChip..."
-$ExistingInclude = Resolve-Path "$BoardDir/../../MXChip/AZ3166/lib/stm32cubef4/Drivers/CMSIS/Include"
-Copy-Item -Path "$ExistingInclude/*" -Destination $CmsisIncludeDest -Recurse -Force
-Write-Host "[OK] CMSIS Core Include headers copied"
+# 3. Fetch up-to-date CMSIS Core headers from ST's official repository
+Write-Host "[INFO] Cloning up-to-date STM32 CMSIS Core (depth=1)..."
+git clone --depth 1 https://github.com/STMicroelectronics/cmsis-core.git $TempDir
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[ERROR] Failed to clone CMSIS Core repository!" -ForegroundColor Red
+    CleanTemp
+    exit 1
+}
+Copy-Item -Path "$TempDir/CMSIS/Core/Include/*" -Destination $CmsisIncludeDest -Recurse -Force
+CleanTemp
+Write-Host "[OK] Up-to-date CMSIS Core Include headers copied"
 Write-Host ""
 
 Write-Host "=========================================="
