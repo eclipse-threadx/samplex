@@ -157,6 +157,23 @@ _tx_initialize_low_level:
 __tx_BadHandler:
     B       __tx_BadHandler
 
+@ /* SVC placeholder (scheduling uses PendSV on Cortex-M; required by vector table). */
+    .global  __tx_SVCallHandler
+    .thumb_func
+__tx_SVCallHandler:
+    B       __tx_SVCallHandler
+
+@ /* NMI and Debug monitor placeholders. */
+    .global  __tx_NMIHandler
+    .thumb_func
+__tx_NMIHandler:
+    B       __tx_NMIHandler
+
+    .global  __tx_DBGHandler
+    .thumb_func
+__tx_DBGHandler:
+    B       __tx_DBGHandler
+
 @ /* Generic interrupt handler template */
     .global  __tx_IntHandler
     .thumb_func

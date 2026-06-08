@@ -17,7 +17,8 @@ add_library(${TARGET} OBJECT
 )
 
 target_link_libraries(${TARGET}
-    stm32cubef4
+    PUBLIC
+        stm32cubef4
 )
 
 target_include_directories(${TARGET}

@@ -15,7 +15,9 @@ set(TX_USER_FILE
 
 # Core libraries
 add_subdirectory(${SHARED_LIB_DIR}/threadx threadx)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../../../MXChip/AZ3166/deps/lib/nanoprintf nanoprintf)
+# Same nanoprintf layout as MXChip/AZ3166 (deps/lib/nanoprintf).
+set(NANOPRINTF_DIR "${CMAKE_SOURCE_DIR}/../../MXChip/AZ3166/deps/lib/nanoprintf")
+add_subdirectory(${NANOPRINTF_DIR} nanoprintf)
 
 # STM32 platform libraries
 add_subdirectory(stm32cubef4)

@@ -173,14 +173,9 @@ SECTIONS
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
+    /* ThreadX: first free RAM after reserved heap/stack (tx_initialize_low_level.S). */
+    __RAM_segment_used_end__ = .;
   } >RAM
-
-  /* ThreadX: marks the first free RAM address available for dynamic allocation.
-   * ALIGN(8) ensures ARM EABI 8-byte alignment, required for ThreadX internal
-   * thread stacks and memory pools. Referenced in tx_initialize_low_level.S as:
-   *   LDR r1, =__RAM_segment_used_end__
-   */
-  __RAM_segment_used_end__ = ALIGN(8);
 
   /* Remove information from the compiler libraries */
   /DISCARD/ :

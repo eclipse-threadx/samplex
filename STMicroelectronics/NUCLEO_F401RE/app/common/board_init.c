@@ -1,0 +1,147 @@
+/*
+ * Copyright (c) 2026 Eclipse Foundation
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+#include "board_init.h"
+
+#include <stdio.h>
+
+#include "nucleo_bsp.h"
+
+UART_HandleTypeDef UartHandle;
+
+static TIM_HandleTypeDef hal_tick_tim_handle;
+
+static void SystemClock_Config(void);
+static void GPIO_Init(void);
+static void UART_Console_Init(void);
+static void Error_Handler(void);
+
+void board_init(void)
+{
+    HAL_Init();
+    SystemClock_Config();
+    SystemCoreClockUpdate();
+
+    GPIO_Init();
+    UART_Console_Init();
+    nucleo_bsp_init();
+}
+
+/**
+ * 84 MHz SYSCLK from 8 MHz HSE (Nucleo ST-LINK MCO).
+ * PLL: M=8, N=336, P=4 -> 84 MHz (RM0368 PLL limits).
+ */
+static void SystemClock_Config(void)
+{
+    RCC_OscInitTypeDef osc = {0};
+    RCC_ClkInitTypeDef clk = {0};
+
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+
+    osc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    osc.HSEState       = RCC_HSE_ON;
+    osc.PLL.PLLState   = RCC_PLL_ON;
+    osc.PLL.PLLSource  = RCC_PLLSOURCE_HSE;
+    osc.PLL.PLLM       = 8;
+    osc.PLL.PLLN       = 336;
+    osc.PLL.PLLP       = RCC_PLLP_DIV4;
+    osc.PLL.PLLQ       = 7;
+    if (HAL_RCC_OscConfig(&osc) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    clk.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                         RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    clk.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+    clk.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+    clk.APB1CLKDivider = RCC_HCLK_DIV2;
+    clk.APB2CLKDivider = RCC_HCLK_DIV1;
+    if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK)
+    {
+        Error_Handler();
+    }
+}
+
+static void GPIO_Init(void)
+{
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+}
+
+static void UART_Console_Init(void)
+{
+    UartHandle.Instance          = USART2;
+    UartHandle.Init.BaudRate     = 115200;
+    UartHandle.Init.WordLength   = UART_WORDLENGTH_8B;
+    UartHandle.Init.StopBits     = UART_STOPBITS_1;
+    UartHandle.Init.Parity       = UART_PARITY_NONE;
+    UartHandle.Init.Mode         = UART_MODE_TX_RX;
+    UartHandle.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+    UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+
+    if (HAL_UART_Init(&UartHandle) != HAL_OK)
+    {
+        Error_Handler();
+    }
+}
+
+static void Error_Handler(void)
+{
+    while (1)
+    {
+    }
+}
+
+/**
+ * HAL tick on TIM2 (F401 has no TIM6) so SysTick remains owned by ThreadX.
+ * Adapted from ST stm32f4xx_hal_timebase_tim_template.c (RM0368).
+ */
+HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
+{
+    RCC_ClkInitTypeDef clkconfig;
+    uint32_t tim_clock;
+    uint32_t prescaler;
+    uint32_t latency;
+
+    HAL_NVIC_SetPriority(TIM2_IRQn, TickPriority, 0U);
+    HAL_NVIC_EnableIRQ(TIM2_IRQn);
+    __HAL_RCC_TIM2_CLK_ENABLE();
+
+    HAL_RCC_GetClockConfig(&clkconfig, &latency);
+    tim_clock = (clkconfig.APB1CLKDivider == RCC_HCLK_DIV1)
+                    ? HAL_RCC_GetPCLK1Freq()
+                    : (2U * HAL_RCC_GetPCLK1Freq());
+
+    prescaler = (tim_clock / 1000000U) - 1U;
+
+    hal_tick_tim_handle.Instance               = TIM2;
+    hal_tick_tim_handle.Init.Prescaler         = prescaler;
+    hal_tick_tim_handle.Init.Period            = (1000000U / 1000U) - 1U;
+    hal_tick_tim_handle.Init.ClockDivision     = 0U;
+    hal_tick_tim_handle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    hal_tick_tim_handle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+    if (HAL_TIM_Base_Init(&hal_tick_tim_handle) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    return HAL_TIM_Base_Start_IT(&hal_tick_tim_handle);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM2)
+    {
+        HAL_IncTick();
+    }
+}
+
+void TIM2_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&hal_tick_tim_handle);
+}

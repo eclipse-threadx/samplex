@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) 2026 Eclipse Foundation
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+#include "nucleo_bsp.h"
+
+void nucleo_bsp_init(void)
+{
+    GPIO_InitTypeDef gpio = {0};
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    gpio.Pin   = NUCLEO_LED_PIN;
+    gpio.Mode  = GPIO_MODE_OUTPUT_PP;
+    gpio.Pull  = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(NUCLEO_LED_GPIO_PORT, &gpio);
+
+    nucleo_led_off();
+}
+
+void nucleo_led_on(void)
+{
+    HAL_GPIO_WritePin(NUCLEO_LED_GPIO_PORT, NUCLEO_LED_PIN, GPIO_PIN_SET);
+}
+
+void nucleo_led_off(void)
+{
+    HAL_GPIO_WritePin(NUCLEO_LED_GPIO_PORT, NUCLEO_LED_PIN, GPIO_PIN_RESET);
+}
+
+void nucleo_led_toggle(void)
+{
+    HAL_GPIO_TogglePin(NUCLEO_LED_GPIO_PORT, NUCLEO_LED_PIN);
+}

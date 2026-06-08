@@ -24,6 +24,7 @@ set(SOURCES
 
     ${COMMON_DIR}/board_init.c
     ${COMMON_DIR}/console.c
+    ${COMMON_DIR}/newlib_syscalls.c
 
     ${CONFIG_DIR}/main.c
 )
@@ -31,11 +32,11 @@ set(SOURCES
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME}
-    azrtos::threadx
-
-    stm32cubef4
-    nucleo_bsp
-    nanoprintf
+    PRIVATE
+        azrtos::threadx
+        stm32cubef4
+        nucleo_bsp
+        nanoprintf
 )
 
 target_include_directories(${PROJECT_NAME}
