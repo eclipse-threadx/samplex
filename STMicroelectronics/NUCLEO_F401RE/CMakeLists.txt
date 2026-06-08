@@ -13,6 +13,9 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/cmake/arm-gcc-cortex-m4.cmake")
 endif()
 
+# Export compile commands for IDE indexer/clangd support
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 project(nucleo_f401re C ASM)
 
 enable_language(ASM)
