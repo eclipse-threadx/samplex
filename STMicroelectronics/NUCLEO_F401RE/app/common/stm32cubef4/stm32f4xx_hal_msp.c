@@ -9,6 +9,8 @@
 void HAL_MspInit(void)
 {
     /* Do not configure SysTick here; ThreadX owns SysTick/PendSV/SVC. */
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    __HAL_RCC_PWR_CLK_ENABLE();
 }
 
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)

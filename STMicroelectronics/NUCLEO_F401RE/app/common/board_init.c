@@ -43,7 +43,7 @@ static void SystemClock_Config(void)
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
 
     osc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-    osc.HSEState       = RCC_HSE_ON;
+    osc.HSEState       = RCC_HSE_BYPASS;
     osc.PLL.PLLState   = RCC_PLL_ON;
     osc.PLL.PLLSource  = RCC_PLLSOURCE_HSE;
     osc.PLL.PLLM       = 8;
