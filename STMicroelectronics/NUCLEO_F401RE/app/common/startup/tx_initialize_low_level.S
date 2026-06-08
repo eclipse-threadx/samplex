@@ -1,13 +1,12 @@
-@/**************************************************************************/
-@/*                                                                        */
-@/*       This program and the accompanying materials are made available   */
-@/*       under the terms of the MIT license which is available at         */
-@/*       https://opensource.org/license/mit                               */
-@/*       and in the root directory of this software.                      */
-@/*                                                                        */
-@/*       SPDX-License-Identifier: MIT                                     */
-@/*                                                                        */
-@/**************************************************************************/
+@/***************************************************************************
+@ * Copyright (c) 2024 Microsoft Corporation
+@ *
+@ * This program and the accompanying materials are made available under the
+@ * terms of the MIT License which is available at
+@ * https://opensource.org/licenses/MIT.
+@ *
+@ * SPDX-License-Identifier: MIT
+@ **************************************************************************/
 @
 @
 @/**************************************************************************/
@@ -19,16 +18,6 @@
 @/**                                                                       */
 @/**************************************************************************/
 @/**************************************************************************/
-@
-@#define TX_SOURCE_CODE
-@
-@
-@/* Include necessary system files.  */
-@
-@#include "tx_api.h"
-@#include "tx_initialize.h"
-@#include "tx_thread.h"
-@#include "tx_timer.h"
 @
 @
     .global     _tx_thread_system_stack_ptr
@@ -48,6 +37,13 @@
     .global     __tx_IntHandler                     @ Int 0
 @
 @
+/* SYSTEM_CLOCK must match the SYSCLK configured in board_init.c SystemClock_Config().
+ * STM32F401RE maximum is 84 MHz (confirmed in RM0368 Reference Manual).
+ * Formula: SYSTICK_CYCLES = (SYSTEM_CLOCK / 100) - 1
+ * Result:  (84000000 / 100) - 1 = 839999 cycles per SysTick interrupt (100 Hz).
+ * If this does not match your actual clock, tx_thread_sleep() and all RTOS
+ * timing will run at the wrong speed.
+ */
 SYSTEM_CLOCK      =   84000000
 SYSTICK_CYCLES    =   ((SYSTEM_CLOCK / 100) -1)
 
@@ -59,7 +55,7 @@ SYSTICK_CYCLES    =   ((SYSTEM_CLOCK / 100) -1)
 @/*  FUNCTION                                               RELEASE        */
 @/*                                                                        */
 @/*    _tx_initialize_low_level                          Cortex-M4/GNU     */
-@/*                                                           6.0          */
+@/*                                                           6.1          */
 @/*  AUTHOR                                                                */
 @/*                                                                        */
 @/*    William E. Lamie, Microsoft Corporation                             */
@@ -88,12 +84,6 @@ SYSTICK_CYCLES    =   ((SYSTEM_CLOCK / 100) -1)
 @/*                                                                        */
 @/*    _tx_initialize_kernel_enter           ThreadX entry function        */
 @/*                                                                        */
-@/*  RELEASE HISTORY                                                       */
-@/*                                                                        */
-@/*    DATE              NAME                      DESCRIPTION             */
-@/*                                                                        */
-@/*  05-19-2020     William E. Lamie         Initial Version 6.0           */
-@/*                                                                        */
 @/**************************************************************************/
 @VOID   _tx_initialize_low_level(VOID)
 @{
@@ -106,17 +96,17 @@ _tx_initialize_low_level:
     CPSID   i
 @
 @    /* Set base of available memory to end of non-initialised RAM area.  */
-@     
+@
     LDR     r0, =_tx_initialize_unused_memory       @ Build address of unused memory pointer
-    LDR     r1, =__RAM_segment_used_end__           @ Build first free address   
-    ADD     r1, r1, #4                              @ 
+    LDR     r1, =__RAM_segment_used_end__           @ Build first free address
+    ADD     r1, r1, #4                              @
     STR     r1, [r0]                                @ Setup first unused memory pointer
 @
 @    /* Setup Vector Table Offset Register.  */
-@    
+@
     MOV     r0, #0xE000E000                         @ Build address of NVIC registers
-    LDR     r1, =_vectors                           @ Pickup address of vector table  
-    STR     r1, [r0, #0xD08]                        @ Set vector table address   
+    LDR     r1, =_vectors                           @ Pickup address of vector table
+    STR     r1, [r0, #0xD08]                        @ Set vector table address
 @
 @    /* Set system stack pointer from vector value.  */
 @
@@ -130,7 +120,7 @@ _tx_initialize_low_level:
     LDR     r0, =0xE0001000                         @ Build address of DWT register
     LDR     r1, [r0]                                @ Pickup the current value
     ORR     r1, r1, #1                              @ Set the CYCCNTENA bit
-    STR     r1, [r0]                                @ Enable the cycle count register 
+    STR     r1, [r0]                                @ Enable the cycle count register
 @
 @    /* Configure SysTick for 100Hz clock, or 16384 cycles if no reference.  */
 @
@@ -152,11 +142,11 @@ _tx_initialize_low_level:
     LDR     r1, =0x40FF0000                         @ SysT, PnSV, Rsrv, DbgM
     STR     r1, [r0, #0xD20]                        @ Setup System Handlers 12-15 Priority Registers
                                                     @ Note: PnSV must be lowest priority, which is 0xFF
-        
+
 @
 @    /* Return to caller.  */
-@    
-    BX      lr 
+@
+    BX      lr
 @}
 @
 
@@ -167,40 +157,24 @@ _tx_initialize_low_level:
 __tx_BadHandler:
     B       __tx_BadHandler
 
-@ /* added to catch the hardfault */
-
-    .global  __tx_HardfaultHandler
-    .thumb_func
-__tx_HardfaultHandler:
-    B       __tx_HardfaultHandler
-
-
-@ /* added to catch the SVC */
-
-    .global  __tx_SVCallHandler
-    .thumb_func
-__tx_SVCallHandler:
-    B       __tx_SVCallHandler
-
-
 @ /* Generic interrupt handler template */
     .global  __tx_IntHandler
     .thumb_func
 __tx_IntHandler:
 @ VOID InterruptHandler (VOID)
 @ {
-    PUSH    {lr}
+    PUSH    {r0, lr}
 #ifdef TX_ENABLE_EXECUTION_CHANGE_NOTIFY
-    BL      _tx_execution_isr_enter             ; Call the ISR enter function
-#endif       
+    BL      _tx_execution_isr_enter             @ Call the ISR enter function
+#endif
 
 @    /* Do interrupt handler work here */
 @    /* BL <your C Function>.... */
 
 #ifdef TX_ENABLE_EXECUTION_CHANGE_NOTIFY
-    BL      _tx_execution_isr_exit              ; Call the ISR exit function
+    BL      _tx_execution_isr_exit              @ Call the ISR exit function
 #endif
-    POP     {lr}
+    POP     {r0, lr}
     BX      LR
 @ }
 
@@ -209,31 +183,19 @@ __tx_IntHandler:
     .global  SysTick_Handler
     .thumb_func
 __tx_SysTickHandler:
+    .thumb_func
 SysTick_Handler:
 @ VOID TimerInterruptHandler (VOID)
 @ {
 @
-    PUSH    {lr}
+    PUSH    {r0, lr}
 #ifdef TX_ENABLE_EXECUTION_CHANGE_NOTIFY
-    BL      _tx_execution_isr_enter             ; Call the ISR enter function
+    BL      _tx_execution_isr_enter             @ Call the ISR enter function
 #endif
     BL      _tx_timer_interrupt
 #ifdef TX_ENABLE_EXECUTION_CHANGE_NOTIFY
-    BL      _tx_execution_isr_exit              ; Call the ISR exit function
+    BL      _tx_execution_isr_exit              @ Call the ISR exit function
 #endif
-    POP     {lr}
+    POP     {r0, lr}
     BX      LR
 @ }
-
-
-@ /* NMI, DBG handlers */
-    .global  __tx_NMIHandler 
-    .thumb_func
-__tx_NMIHandler:
-    B       __tx_NMIHandler
-
-    .global  __tx_DBGHandler
-    .thumb_func
-__tx_DBGHandler:
-    B       __tx_DBGHandler
-
