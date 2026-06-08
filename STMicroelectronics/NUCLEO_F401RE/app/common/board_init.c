@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Eclipse Foundation
+ * Copyright (c) 2026 Eclipse ThreadX contributors
  *
  * SPDX-License-Identifier: MIT
  */
@@ -130,6 +130,9 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
         return HAL_ERROR;
     }
 
+    /* Save the new tick priority */
+    uwTickPrio = TickPriority;
+
     return HAL_TIM_Base_Start_IT(&hal_tick_tim_handle);
 }
 
@@ -144,4 +147,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void TIM2_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&hal_tick_tim_handle);
+}
+
+void HAL_SuspendTick(void)
+{
+    /* Disable TIM2 update interrupt */
+    __HAL_TIM_DISABLE_IT(&hal_tick_tim_handle, TIM_IT_UPDATE);
+}
+
+void HAL_ResumeTick(void)
+{
+    /* Enable TIM2 update interrupt */
+    __HAL_TIM_ENABLE_IT(&hal_tick_tim_handle, TIM_IT_UPDATE);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Eclipse Foundation
+ * Copyright (c) 2026 Eclipse ThreadX contributors
  *
  * SPDX-License-Identifier: MIT
  */

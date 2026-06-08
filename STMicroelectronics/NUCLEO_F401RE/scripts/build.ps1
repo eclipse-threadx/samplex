@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Eclipse ThreadX contributors
+#
+# SPDX-License-Identifier: MIT
+
 param(
     [string]$Config = "starter",
     [switch]$Clean,

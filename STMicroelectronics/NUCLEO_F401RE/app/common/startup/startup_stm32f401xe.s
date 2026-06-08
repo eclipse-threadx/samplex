@@ -449,5 +449,5 @@ g_pfnVectors:
    .weak      FPU_IRQHandler                  
    .thumb_set FPU_IRQHandler,Default_Handler  
 
-   .weak      SPI4_IRQHandler                  
-   .thumb_set SPI4_IRQHandler,Default_Handler 
+    .weak      SPI4_IRQHandler                  
+    .thumb_set SPI4_IRQHandler,Default_Handler

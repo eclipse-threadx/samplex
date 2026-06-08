@@ -1,4 +1,4 @@
-#  Copyright (c) 2026 Eclipse Foundation
+#  Copyright (c) 2026 Eclipse ThreadX contributors
 # 
 #  This program and the accompanying materials are made available 
 #  under the terms of the MIT license which is available at
@@ -15,9 +15,6 @@ set(TX_USER_FILE
 
 # Core libraries
 add_subdirectory(${SHARED_LIB_DIR}/threadx threadx)
-# Same nanoprintf layout as MXChip/AZ3166 (deps/lib/nanoprintf).
-set(NANOPRINTF_DIR "${CMAKE_SOURCE_DIR}/../../MXChip/AZ3166/deps/lib/nanoprintf")
-add_subdirectory(${NANOPRINTF_DIR} nanoprintf)
 
 # STM32 platform libraries
 add_subdirectory(stm32cubef4)

@@ -1,4 +1,4 @@
-#  Copyright (c) 2026 Eclipse Foundation
+#  Copyright (c) 2026 Eclipse ThreadX contributors
 # 
 #  This program and the accompanying materials are made available 
 #  under the terms of the MIT license which is available at
@@ -36,7 +36,6 @@ target_link_libraries(${PROJECT_NAME}
         azrtos::threadx
         stm32cubef4
         nucleo_bsp
-        nanoprintf
 )
 
 target_include_directories(${PROJECT_NAME}
