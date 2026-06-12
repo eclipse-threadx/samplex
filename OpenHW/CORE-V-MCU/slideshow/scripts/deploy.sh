@@ -49,7 +49,7 @@ OPENOCD_PID=""
 OPENOCD_TIMEOUT=10
 
 DEFAULT_ELF="${PROJECT_DIR}/build/core_v_mcu_slideshow.elf"
-DEFAULT_CFG="${PROJECT_DIR}/../../libs/threadx/ports/risc-v32/gnu/example_build/core_v_mcu/openocd-nexys-Ashling-Opella-LD.cfg"
+DEFAULT_CFG="${PROJECT_DIR}/../../../libs/threadx/ports/risc-v32/gnu/example_build/core_v_mcu/openocd-nexys-Ashling-Opella-LD.cfg"
 
 OPT_BUILD=0
 OPT_DEBUG=0
