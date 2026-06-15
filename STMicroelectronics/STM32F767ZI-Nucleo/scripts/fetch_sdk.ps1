@@ -15,6 +15,7 @@ $DriversDir = Join-Path $LibDir "Drivers"
 $HalDest = Join-Path $DriversDir "STM32F7xx_HAL_Driver"
 $CmsisDeviceDest = Join-Path $DriversDir "CMSIS/Device/ST/STM32F7xx"
 $CmsisIncludeDest = Join-Path $DriversDir "CMSIS/Include"
+$NetxDriverDest = Join-Path $BoardDir "lib/netxduo"
 
 Write-Host "=========================================="
 Write-Host "STM32CubeF7 Standalone Driver Fetcher"
@@ -26,10 +27,12 @@ Write-Host ""
 if (Test-Path $HalDest) { Remove-Item -Path $HalDest -Recurse -Force }
 if (Test-Path $CmsisDeviceDest) { Remove-Item -Path $CmsisDeviceDest -Recurse -Force }
 if (Test-Path $CmsisIncludeDest) { Remove-Item -Path $CmsisIncludeDest -Recurse -Force }
+if (Test-Path $NetxDriverDest) { Remove-Item -Path $NetxDriverDest -Recurse -Force }
 
 New-Item -ItemType Directory -Path $HalDest -Force | Out-Null
 New-Item -ItemType Directory -Path $CmsisDeviceDest -Force | Out-Null
 New-Item -ItemType Directory -Path $CmsisIncludeDest -Force | Out-Null
+New-Item -ItemType Directory -Path $NetxDriverDest -Force | Out-Null
 
 $TempDir = Join-Path $BoardDir "temp_clone"
 
@@ -81,6 +84,36 @@ if ($LASTEXITCODE -ne 0) {
 Copy-Item -Path "$TempDir/CMSIS/Core/Include/*" -Destination $CmsisIncludeDest -Recurse -Force
 CleanTemp
 Write-Host "[OK] Up-to-date CMSIS Core Include headers copied"
+Write-Host ""
+
+# 4. Fetch NetX Duo STM32 middleware drivers
+Write-Host "[INFO] Cloning STM32 NetX Duo middleware drivers (depth=1)..."
+git clone --depth 1 https://github.com/STMicroelectronics/stm32-mw-netxduo.git $TempDir
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[ERROR] Failed to clone NetX Duo middleware repository!" -ForegroundColor Red
+    CleanTemp
+    exit 1
+}
+Copy-Item -Path "$TempDir/common/drivers/ethernet/nx_stm32_eth_driver.c" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/common/drivers/ethernet/nx_stm32_eth_driver.h" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/common/drivers/ethernet/lan8742/nx_stm32_phy_driver.c" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/common/drivers/ethernet/nx_stm32_phy_driver.h" -Destination $NetxDriverDest -Force
+CleanTemp
+Write-Host "[OK] NetX Duo STM32 Ethernet drivers copied"
+Write-Host ""
+
+# 5. Fetch LAN8742 PHY driver
+Write-Host "[INFO] Cloning LAN8742 PHY driver (depth=1)..."
+git clone --depth 1 https://github.com/STMicroelectronics/stm32-lan8742.git $TempDir
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[ERROR] Failed to clone LAN8742 PHY repository!" -ForegroundColor Red
+    CleanTemp
+    exit 1
+}
+Copy-Item -Path "$TempDir/lan8742.c" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/lan8742.h" -Destination $NetxDriverDest -Force
+CleanTemp
+Write-Host "[OK] LAN8742 PHY drivers copied"
 Write-Host ""
 
 Write-Host "=========================================="

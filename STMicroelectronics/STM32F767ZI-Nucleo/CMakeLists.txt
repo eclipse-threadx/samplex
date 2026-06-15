@@ -24,9 +24,8 @@ include(utilities)
 # Define the Project
 project(stm32f767_threadx C CXX ASM)
 
-# Define ThreadX User Configurations
-set(TX_USER_FILE "${CMAKE_CURRENT_LIST_DIR}/lib/threadx/tx_user.h" CACHE STRING "Enable TX user configuration")
-set(TX_USER_FILE_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/threadx")
+# Select the active demo to build (threadx_basic)
+set(ACTIVE_DEMO "threadx_basic" CACHE STRING "Active demo name to build: threadx_basic")
 
 # Set up standard paths for find modules
 set(STM32_FAMILY "F7")
@@ -54,52 +53,96 @@ target_include_directories(${HAL_TARGET}
         ${CMAKE_CURRENT_LIST_DIR}/app
 )
 
+# Dynamic Middleware Auto-Detection
+# Check if the active demo uses NetX Duo by looking for nx_user.h
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}/nx_user.h")
+    set(USE_NETXDUO ON)
+    set(NX_USER_FILE "${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}/nx_user.h" CACHE STRING "Enable NetX Duo user configuration" FORCE)
+else()
+    set(USE_NETXDUO OFF)
+endif()
+
+# Check if the active demo has custom tx_user.h; otherwise fallback to app/tx_user.h
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}/tx_user.h")
+    set(TX_USER_FILE "${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}/tx_user.h" CACHE STRING "Enable TX user configuration" FORCE)
+    set(TX_USER_FILE_DIR "${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}")
+else()
+    set(TX_USER_FILE "${CMAKE_CURRENT_LIST_DIR}/lib/threadx/tx_user.h" CACHE STRING "Enable TX user configuration" FORCE)
+    set(TX_USER_FILE_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/threadx")
+endif()
+
 # Compile ThreadX Kernel from root shared libs submodule
 set(THREADX_DIR "${CMAKE_CURRENT_LIST_DIR}/../../libs/threadx")
 add_subdirectory(${THREADX_DIR} threadx)
 
-# Create the Main Executable
-set(EXE_TARGET stm32f767_threadx)
+if(USE_NETXDUO)
+    # Compile NetX Duo TCP/IP Stack from root shared libs submodule
+    set(NXD_ENABLE_FILE_SERVERS OFF CACHE BOOL "Disable FileX dependency in NetX Duo" FORCE)
+    set(NETXDUO_DIR "${CMAKE_CURRENT_LIST_DIR}/../../libs/netxduo")
+    add_subdirectory(${NETXDUO_DIR} netxduo)
+endif()
 
-add_executable(${EXE_TARGET}
+# 1. Define the Board BSP static library
+add_library(board_bsp OBJECT
     app/startup/startup_stm32f767zitx.s
     app/startup/system_stm32f7xx.c
     app/startup/tx_initialize_low_level.S
     app/board_init.c
     app/console.c
-    app/ethernet_phy.c
-    app/main.c
     app/stm32f7xx_hal_msp.c
     app/sysmem.c
     app/syscalls.c
 )
 
-# Set compile definitions for our executable
-target_compile_definitions(${EXE_TARGET}
-    PRIVATE
-        STM32F767xx
-        USE_HAL_DRIVER
-        STM32F7
+# Include paths for BSP
+target_include_directories(board_bsp PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/app
+    ${CMSIS_INCLUDE_DIRS}
+    ${STM32HAL_INCLUDE_DIR}
+    ${TX_USER_FILE_DIR}
 )
 
-# Include paths
-target_include_directories(${EXE_TARGET}
-    PRIVATE
+# Compile definitions for BSP
+target_compile_definitions(board_bsp PRIVATE
+    STM32F767xx
+    USE_HAL_DRIVER
+    STM32F7
+)
+
+# Link libraries for BSP (HAL and CMSIS)
+target_link_libraries(board_bsp PUBLIC
+    stm32cubef7
+)
+
+# 2. Define conditional NetX Duo driver library target
+if(USE_NETXDUO)
+    add_library(netx_stm32_driver OBJECT
+        lib/netxduo/nx_stm32_eth_driver.c
+        lib/netxduo/nx_stm32_phy_driver.c
+        lib/netxduo/lan8742.c
+    )
+    
+    # NetX driver needs its local files, HAL, CMSIS, ThreadX, NetX Duo and the active demo folder (for nx_stm32_eth_config.h and nx_user.h)
+    target_include_directories(netx_stm32_driver PUBLIC
+        ${CMAKE_CURRENT_LIST_DIR}/lib/netxduo
+        ${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}
         ${CMAKE_CURRENT_LIST_DIR}/app
         ${CMSIS_INCLUDE_DIRS}
         ${STM32HAL_INCLUDE_DIR}
-        ${TX_USER_FILE_DIR}
-)
-
-# Link libraries (includes ThreadX kernel and HAL object libraries)
-target_link_libraries(${EXE_TARGET}
-    PRIVATE
-        threadx
+    )
+    
+    target_compile_definitions(netx_stm32_driver PRIVATE
+        STM32F767xx
+        USE_HAL_DRIVER
+        STM32F7
+    )
+    
+    target_link_libraries(netx_stm32_driver PUBLIC
+        netxduo
         stm32cubef7
-)
+    )
+endif()
 
-# Apply GCC linker script and print memory usage (utilities.cmake function)
-set_target_linker(${EXE_TARGET} "${CMAKE_CURRENT_LIST_DIR}/app/startup/STM32F767ZITx_FLASH.ld")
+# 3. Add the active demo subdirectory to build the executable target
+add_subdirectory(app/demos/${ACTIVE_DEMO})
 
-# Post-build commands to generate raw .bin and .hex files
-post_build(${EXE_TARGET})

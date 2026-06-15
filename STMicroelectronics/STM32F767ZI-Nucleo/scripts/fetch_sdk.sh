@@ -21,6 +21,7 @@ DRIVERS_DIR="${LIB_DIR}/Drivers"
 HAL_DEST="${DRIVERS_DIR}/STM32F7xx_HAL_Driver"
 CMSIS_DEVICE_DEST="${DRIVERS_DIR}/CMSIS/Device/ST/STM32F7xx"
 CMSIS_INCLUDE_DEST="${DRIVERS_DIR}/CMSIS/Include"
+NETX_DRIVER_DEST="${BOARD_DIR}/lib/netxduo"
 
 echo "=========================================="
 echo "STM32CubeF7 Standalone Driver Fetcher (Linux)"
@@ -32,11 +33,13 @@ echo ""
 rm -rf "${HAL_DEST}"
 rm -rf "${CMSIS_DEVICE_DEST}"
 rm -rf "${CMSIS_INCLUDE_DEST}"
+rm -rf "${NETX_DRIVER_DEST}"
 
 # Re-create directories
 mkdir -p "${HAL_DEST}"
 mkdir -p "${CMSIS_DEVICE_DEST}"
 mkdir -p "${CMSIS_INCLUDE_DEST}"
+mkdir -p "${NETX_DRIVER_DEST}"
 
 TEMP_DIR="${BOARD_DIR}/temp_clone"
 
@@ -75,6 +78,26 @@ git clone --depth 1 https://github.com/STMicroelectronics/cmsis-core.git "${TEMP
 cp -r "${TEMP_DIR}/CMSIS/Core/Include/"* "${CMSIS_INCLUDE_DEST}/"
 clean_temp
 echo "[OK] Up-to-date CMSIS Core Include headers copied"
+echo ""
+
+# 4. Fetch NetX Duo STM32 middleware drivers
+echo "[INFO] Cloning STM32 NetX Duo middleware drivers (depth=1)..."
+git clone --depth 1 https://github.com/STMicroelectronics/stm32-mw-netxduo.git "${TEMP_DIR}"
+cp -f "${TEMP_DIR}/common/drivers/ethernet/nx_stm32_eth_driver.c" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/common/drivers/ethernet/nx_stm32_eth_driver.h" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/common/drivers/ethernet/lan8742/nx_stm32_phy_driver.c" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/common/drivers/ethernet/nx_stm32_phy_driver.h" "${NETX_DRIVER_DEST}/"
+clean_temp
+echo "[OK] NetX Duo STM32 Ethernet drivers copied"
+echo ""
+
+# 5. Fetch LAN8742 PHY driver
+echo "[INFO] Cloning LAN8742 PHY driver (depth=1)..."
+git clone --depth 1 https://github.com/STMicroelectronics/stm32-lan8742.git "${TEMP_DIR}"
+cp -f "${TEMP_DIR}/lan8742.c" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/lan8742.h" "${NETX_DRIVER_DEST}/"
+clean_temp
+echo "[OK] LAN8742 PHY drivers copied"
 echo ""
 
 echo "=========================================="
