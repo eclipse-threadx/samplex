@@ -82,11 +82,16 @@ echo ""
 
 # 4. Fetch NetX Duo STM32 middleware drivers
 echo "[INFO] Cloning STM32 NetX Duo middleware drivers (depth=1)..."
-git clone --depth 1 https://github.com/STMicroelectronics/stm32-mw-netxduo.git "${TEMP_DIR}"
-cp -f "${TEMP_DIR}/common/drivers/ethernet/nx_stm32_eth_driver.c" "${NETX_DRIVER_DEST}/"
-cp -f "${TEMP_DIR}/common/drivers/ethernet/nx_stm32_eth_driver.h" "${NETX_DRIVER_DEST}/"
-cp -f "${TEMP_DIR}/common/drivers/ethernet/lan8742/nx_stm32_phy_driver.c" "${NETX_DRIVER_DEST}/"
-cp -f "${TEMP_DIR}/common/drivers/ethernet/nx_stm32_phy_driver.h" "${NETX_DRIVER_DEST}/"
+git clone --depth 1 https://github.com/STMicroelectronics/x-cube-azrtos-f7.git "${TEMP_DIR}"
+cp -f "${TEMP_DIR}/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_eth_driver.c" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_eth_driver.h" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/Middlewares/ST/netxduo/common/drivers/ethernet/lan8742/nx_stm32_phy_driver.c" "${NETX_DRIVER_DEST}/"
+cp -f "${TEMP_DIR}/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_phy_driver.h" "${NETX_DRIVER_DEST}/"
+
+# ST modified the HAL ETH driver to match the new H7-style API for NetX Duo, so we must overwrite the default ones
+cp -f "${TEMP_DIR}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c" "${HAL_DEST}/Src/"
+cp -f "${TEMP_DIR}/Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_eth.h" "${HAL_DEST}/Inc/"
+
 clean_temp
 echo "[OK] NetX Duo STM32 Ethernet drivers copied"
 echo ""

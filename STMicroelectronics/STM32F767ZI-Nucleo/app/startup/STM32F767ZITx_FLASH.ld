@@ -31,7 +31,7 @@ ENTRY(Reset_Handler)
 _vectors = g_pfnVectors;
 
 /* Highest address of the user mode stack */
-_estack = 0x20050000;    /* end of RAM */
+_estack = 0x20080000;    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
@@ -40,7 +40,7 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 MEMORY
 {
 FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 2048K
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 320K
+RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 512K
 }
 
 /* Define output sections */
@@ -139,6 +139,16 @@ SECTIONS
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
     __RAM_segment_used_end__ = _ebss;
+  } >RAM
+
+  .nx_data 0x20060000 (NOLOAD):
+  {
+    . = ALIGN(4);
+    *(.RxDecripSection)
+    *(.TxDecripSection)
+    *(.RxArraySection)
+    *(.NetXPoolSection)
+    . = ALIGN(4);
   } >RAM
 
   /* User_heap_stack section, used to check that there is enough RAM left */

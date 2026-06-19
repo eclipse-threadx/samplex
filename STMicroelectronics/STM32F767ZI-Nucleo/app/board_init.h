@@ -36,7 +36,11 @@
 extern UART_HandleTypeDef huart3;
 #define UartHandle huart3
 
+/* Global Ethernet handle */
+extern ETH_HandleTypeDef heth;
+
 /* Define prototypes. */
 void board_init(void);
+void board_ethernet_init(void);
 
 #endif // _BOARD_INIT_H

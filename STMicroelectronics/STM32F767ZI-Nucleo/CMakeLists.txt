@@ -112,7 +112,9 @@ target_compile_definitions(board_bsp PRIVATE
 # Link libraries for BSP (HAL and CMSIS)
 target_link_libraries(board_bsp PUBLIC
     stm32cubef7
+    threadx
 )
+
 
 # 2. Define conditional NetX Duo driver library target
 if(USE_NETXDUO)
@@ -135,6 +137,7 @@ if(USE_NETXDUO)
         STM32F767xx
         USE_HAL_DRIVER
         STM32F7
+        STM32_ETH_HAL_LEGACY
     )
     
     target_link_libraries(netx_stm32_driver PUBLIC

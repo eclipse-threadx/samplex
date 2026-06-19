@@ -88,16 +88,21 @@ Write-Host ""
 
 # 4. Fetch NetX Duo STM32 middleware drivers
 Write-Host "[INFO] Cloning STM32 NetX Duo middleware drivers (depth=1)..."
-git clone --depth 1 https://github.com/STMicroelectronics/stm32-mw-netxduo.git $TempDir
+git clone --depth 1 https://github.com/STMicroelectronics/x-cube-azrtos-f7.git $TempDir
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Failed to clone NetX Duo middleware repository!" -ForegroundColor Red
     CleanTemp
     exit 1
 }
-Copy-Item -Path "$TempDir/common/drivers/ethernet/nx_stm32_eth_driver.c" -Destination $NetxDriverDest -Force
-Copy-Item -Path "$TempDir/common/drivers/ethernet/nx_stm32_eth_driver.h" -Destination $NetxDriverDest -Force
-Copy-Item -Path "$TempDir/common/drivers/ethernet/lan8742/nx_stm32_phy_driver.c" -Destination $NetxDriverDest -Force
-Copy-Item -Path "$TempDir/common/drivers/ethernet/nx_stm32_phy_driver.h" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_eth_driver.c" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_eth_driver.h" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/Middlewares/ST/netxduo/common/drivers/ethernet/lan8742/nx_stm32_phy_driver.c" -Destination $NetxDriverDest -Force
+Copy-Item -Path "$TempDir/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_phy_driver.h" -Destination $NetxDriverDest -Force
+
+# ST modified the HAL ETH driver to match the new H7-style API for NetX Duo, so we must overwrite the default ones
+Copy-Item -Path "$TempDir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c" -Destination "$HalDest/Src" -Force
+Copy-Item -Path "$TempDir/Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_eth.h" -Destination "$HalDest/Inc" -Force
+
 CleanTemp
 Write-Host "[OK] NetX Duo STM32 Ethernet drivers copied"
 Write-Host ""
