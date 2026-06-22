@@ -23,7 +23,13 @@ typedef struct {
   ULONG stack_size;
 } ThreadStats;
 
-#define MAX_THREADS 8
+#define MAX_THREADS 9
+
+typedef struct {
+  ULONG timestamp;
+  ULONG reading_id;
+  ULONG data_value;
+} SensorData;
 
 typedef struct {
   ULONG uptime;
@@ -51,11 +57,15 @@ static TX_THREAD mutex_thread_1;
 static TX_THREAD mutex_thread_2;
 static TX_THREAD queue_sender_thread;
 static TX_THREAD queue_receiver_thread;
+static TX_THREAD semaphore_thread;
 
 /* RTOS Primitives */
 static TX_MUTEX spi_mutex;
 static TX_QUEUE msg_queue;
 static TX_EVENT_FLAGS_GROUP event_flags;
+static TX_BLOCK_POOL sensor_block_pool;
+static TX_SEMAPHORE sensor_semaphore;
+static TX_TIMER app_timer;
 
 /* Activity and Primitive Counters */
 static ULONG monitor_counter = 0;
@@ -66,6 +76,8 @@ static ULONG mutex_acquires_1 = 0;
 static ULONG mutex_acquires_2 = 0;
 static ULONG queue_msgs_received = 0;
 static ULONG event_flags_processed = 0;
+static ULONG semaphore_wakes = 0;
+static ULONG timer_counter = 0;
 
 static const char *get_state_string(UINT state) {
   switch (state) {
@@ -208,12 +220,10 @@ static void reporter_thread_entry(ULONG parameter) {
     printf("-------------------------------------------------------------------"
            "---------\r\n");
 
-    printf("Runs: Monitor: %lu | Reporter: %lu | Blink: %lu\r\n",
-           monitor_counter, reporter_counter, blink_counter);
-    printf("RTOS Showcase: Mutex Locks: %lu/%lu | Queue Msgs: %lu | Event "
-           "Wakes: %lu\r\n",
-           mutex_acquires_1, mutex_acquires_2, queue_msgs_received,
-           event_flags_processed);
+    printf("Runs: Monitor: %lu | Reporter: %lu | Blink: %lu | Timer Wakes: %lu\r\n",
+           monitor_counter, reporter_counter, blink_counter, timer_counter);
+    printf("RTOS Showcase: Mutex Locks: %lu/%lu | Queue Msgs: %lu | Event Wakes: %lu | Sema Wakes: %lu\r\n",
+           mutex_acquires_1, mutex_acquires_2, queue_msgs_received, event_flags_processed, semaphore_wakes);
 
     tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND * 2); /* Report every 2 seconds */
   }
@@ -227,6 +237,8 @@ static void blink_thread_entry(ULONG parameter) {
     blink_counter++;
     /* Toggle Event Flag bit 0 when LED toggles */
     tx_event_flags_set(&event_flags, 0x01, TX_OR);
+    /* Signal Counting Semaphore */
+    tx_semaphore_put(&sensor_semaphore);
     tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 2); /* Sleep 500ms */
   }
 }
@@ -243,6 +255,22 @@ static void event_thread_entry(ULONG parameter) {
       event_flags_processed++;
     }
   }
+}
+
+static void semaphore_thread_entry(ULONG parameter) {
+  (void)parameter;
+
+  while (1) {
+    /* Block on counting semaphore */
+    if (tx_semaphore_get(&sensor_semaphore, TX_WAIT_FOREVER) == TX_SUCCESS) {
+      semaphore_wakes++;
+    }
+  }
+}
+
+static void app_timer_callback(ULONG input) {
+  (void)input;
+  timer_counter++;
 }
 
 static void mutex_thread_1_entry(ULONG parameter) {
@@ -279,21 +307,34 @@ static void queue_sender_entry(ULONG parameter) {
 
   while (1) {
     msg_val++;
-    /* Send message containing counter */
-    tx_queue_send(&msg_queue, &msg_val, TX_NO_WAIT);
+    SensorData *data_ptr;
+    /* Allocate block from fixed-size block pool */
+    if (tx_block_allocate(&sensor_block_pool, (VOID **)&data_ptr, TX_NO_WAIT) == TX_SUCCESS) {
+      data_ptr->timestamp = tx_time_get();
+      data_ptr->reading_id = msg_val;
+      data_ptr->data_value = msg_val * 42;
+      
+      /* Send pointer containing SensorData */
+      if (tx_queue_send(&msg_queue, &data_ptr, TX_NO_WAIT) != TX_SUCCESS) {
+        /* Release block if queue was full to prevent leak */
+        tx_block_release(data_ptr);
+      }
+    }
     tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 5); /* Send every 200ms */
   }
 }
 
 static void queue_receiver_entry(ULONG parameter) {
   (void)parameter;
-  ULONG rx_msg;
+  SensorData *rx_data_ptr;
 
   while (1) {
     /* Block on queue waiting for messages */
-    UINT status = tx_queue_receive(&msg_queue, &rx_msg, TX_WAIT_FOREVER);
+    UINT status = tx_queue_receive(&msg_queue, &rx_data_ptr, TX_WAIT_FOREVER);
     if (status == TX_SUCCESS) {
       queue_msgs_received++;
+      /* Release block back to block pool */
+      tx_block_release(rx_data_ptr);
     }
   }
 }
@@ -329,7 +370,38 @@ void tx_application_define(void *first_unused_memory) {
     return;
   }
 
-  /* Allocate Queue memory and create Queue */
+  /* Create Counting Semaphore */
+  status = tx_semaphore_create(&sensor_semaphore, "Sensor Semaphore", 0);
+  if (status != TX_SUCCESS) {
+    printf("Semaphore create failed: 0x%08x\r\n", status);
+    return;
+  }
+
+  /* Create Application Timer */
+  status = tx_timer_create(&app_timer, "App Timer", app_timer_callback, 0,
+                           TX_TIMER_TICKS_PER_SECOND, TX_TIMER_TICKS_PER_SECOND,
+                           TX_AUTO_START);
+  if (status != TX_SUCCESS) {
+    printf("Timer create failed: 0x%08x\r\n", status);
+    return;
+  }
+
+  /* Allocate Block Pool memory and create Block Pool */
+  VOID *block_pool_ptr;
+  ULONG block_pool_size = 10 * (sizeof(SensorData) + sizeof(VOID *)) + 32;
+  status = tx_byte_allocate(&byte_pool, &block_pool_ptr, block_pool_size, TX_NO_WAIT);
+  if (status != TX_SUCCESS) {
+    printf("Block pool memory allocate failed: 0x%08x\r\n", status);
+    return;
+  }
+  status = tx_block_pool_create(&sensor_block_pool, "Sensor Block Pool", sizeof(SensorData),
+                                block_pool_ptr, block_pool_size);
+  if (status != TX_SUCCESS) {
+    printf("Block pool create failed: 0x%08x\r\n", status);
+    return;
+  }
+
+  /* Allocate Queue memory and create Queue (Stores 10 SensorData pointers) */
   VOID *queue_buffer_ptr;
   status = tx_byte_allocate(&byte_pool, &queue_buffer_ptr, 10 * sizeof(ULONG),
                             TX_NO_WAIT);
@@ -392,6 +464,18 @@ void tx_application_define(void *first_unused_memory) {
     }
   }
 
+  /* Allocate stack and create Semaphore Thread (Priority 12) */
+  status = tx_byte_allocate(&byte_pool, (VOID **)&stack_ptr, THREAD_STACK_SIZE,
+                            TX_NO_WAIT);
+  if (status == TX_SUCCESS) {
+    status = tx_thread_create(&semaphore_thread, "semaphore thread", semaphore_thread_entry,
+                              0, stack_ptr, THREAD_STACK_SIZE, 12, 12,
+                              TX_NO_TIME_SLICE, TX_AUTO_START);
+    if (status != TX_SUCCESS) {
+      printf("Semaphore thread create failed: 0x%08x\r\n", status);
+    }
+  }
+
   /* Allocate stack and create Mutex Thread 1 (Priority 13) */
   status = tx_byte_allocate(&byte_pool, (VOID **)&stack_ptr, THREAD_STACK_SIZE,
                             TX_NO_WAIT);
@@ -449,6 +533,7 @@ void tx_application_define(void *first_unused_memory) {
   thread_registry[5] = &mutex_thread_2;
   thread_registry[6] = &queue_sender_thread;
   thread_registry[7] = &queue_receiver_thread;
+  thread_registry[8] = &semaphore_thread;
 }
 
 int main(void) {
