@@ -140,25 +140,44 @@ The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and pro
 ## Validation Record
 
 ### Verification Environment
-- **Toolchain**: Arm GNU Toolchain 15.2.Rel1
-- **ROM usage**: 11716 Bytes (2.23% of 512 KB Flash)
-- **RAM usage**: 7312 Bytes (7.44% of 96 KB RAM)
+- **Toolchain**: Arm GNU Toolchain 15.2.Rel1 (GCC 15.2.1)
+- **Static ROM usage**: 18244 Bytes (3.48% of 512 KB Flash)
+- **Static RAM usage**: 5632 Bytes (5.73% of 96 KB RAM)
+- **Dynamic Stack & Buffer allocation**: Stacks (8 x 1024 bytes) and Queue buffer (40 bytes) are dynamically allocated from the `TX_BYTE_POOL` (consuming 8312 bytes total, including pool headers).
 - **Board Hardware**: NUCLEO-F401RE
 
 ### Hardware Verification Checklist
 - [x] **Board boots successfully**: System clock configuration correctly executes and sets SysClk to 84 MHz.
-- [x] **LED heartbeat operates correctly**: Onboard user LED LD2 (PA5) blinks at a steady 1 Hz interval (toggled by blink thread).
+- [x] **LED heartbeat operates correctly**: Onboard user LED LD2 (PA5) blinks at a steady rate.
 - [x] **UART console operates at 115200 baud**: Diagnostic outputs are cleanly transmitted over USART2 and displayed in the terminal.
-- [x] **ThreadX scheduler runs correctly**: RTOS scheduler successfully handles multi-threaded execution (Blink, Worker, and Reporter threads).
-- [x] **Runtime monitor output verified on hardware**: UART serial output prints thread performance stats and uptime reports every 2 seconds:
+- [x] **ThreadX scheduler runs correctly**: RTOS scheduler successfully handles 8 threads with priorities ranging from 9 to 15.
+- [x] **Thread Registry & Traversal**: Monitor thread queries thread names, states, run counts, and priorities dynamically using `tx_thread_info_get()`.
+- [x] **Stack High-Water Mark Profiling**: Dynamic upward memory scanning verifies stack peaks (e.g., reporter thread at 42%, other tasks at 11-14%).
+- [x] **RTOS Primitives Showcase**: Verified mutex lock hand-offs under contention, queue message transfers, and event flag synchronization.
+- [x] **Runtime monitor output verified on hardware**: UART serial output prints thread diagnostics table and showcase counters every 2 seconds:
 
 ```text
-==========================================
-Nucleo F401RE ThreadX Multithreading Demo
-==========================================
-[Reporter] Uptime: 0 s | Blink Thread: 0 runs | Worker Thread: 0 runs | Reporter: 1 runs
-[Reporter] Uptime: 2 s | Blink Thread: 4 runs | Worker Thread: 10 runs | Reporter: 2 runs
-[Reporter] Uptime: 4 s | Blink Thread: 8 runs | Worker Thread: 20 runs | Reporter: 3 runs
+System Status:
+------------------------------------------
+Uptime:           257 s
+Byte Pool Size:   88572 bytes
+Allocated Memory: 8312 bytes
+Free Memory:      80260 bytes
+------------------------------------------
+
+Thread Name      Priority State      Run Count    Stack Peak (Max / Size)
+----------------------------------------------------------------------------
+monitor thread   9        READY      2575          120 / 1024 bytes (11%)
+reporter thread  10       SLEEP      256           432 / 1024 bytes (42%)
+blink thread     11       SLEEP      488           136 / 1024 bytes (13%)
+event thread     12       EVENT_FLAG 488           128 / 1024 bytes (12%)
+mutex thread 1   13       SLEEP      7319          144 / 1024 bytes (14%)
+mutex thread 2   13       READY      7319          144 / 1024 bytes (14%)
+queue sender     14       READY      1220          128 / 1024 bytes (12%)
+queue receiver   15       QUEUE_SUSP 1220          128 / 1024 bytes (12%)
+----------------------------------------------------------------------------
+Runs: Monitor: 2576 | Reporter: 123 | Blink: 488
+RTOS Showcase: Mutex Locks: 2440/2440 | Queue Msgs: 1220 | Event Wakes: 488
 ```
 
 
