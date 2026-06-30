@@ -1,21 +1,39 @@
 # Security Policy
 
-## Supported Versions
+This Eclipse Foundation Project adheres to the [Eclipse Foundation Vulnerability Reporting Policy](https://www.eclipse.org/security/policy/).
 
-For the time being, the contents of this repository are not in scope for quarterly releases. New versions will be published as needed to address bugs, vulnerabilities, or integrated updated third-party components.
+## How To Report a Vulnerability
 
-## Reporting a Vulnerability
+If you think you have found a vulnerability in this repository, please report it to us through coordinated disclosure.
 
-If you think you have found a vulnerability in Eclipse ThreadX or one of its companion components, you can report it using one of the following ways:
+**Please do not report security vulnerabilities through public issues, discussions, or change requests.**
 
-* Contact the [Eclipse Foundation Security Team](mailto:security@eclipse-foundation.org)
-* [Report a Vulnerability](https://github.com/eclipse-threadx/threadx/security/advisories/new)
+Instead, [report it privately here](https://github.com/eclipse-threadx/samplex/security/advisories/new) on GitHub
 
 You can find more information about reporting and disclosure at the [Eclipse Foundation Security page](https://www.eclipse.org/security/).
 
-## Security Policy
+Please include as much of the information listed below as you can to help us better understand and resolve the issue:
 
-This project follows [Eclipse Foundation Vulnerability Reporting Policy](https://www.eclipse.org/security/policy/).
+* The type of issue (e.g., buffer overflow, SQL injection, or cross-site scripting)
+* Affected version(s)
+* Impact of the issue, including how an attacker might exploit the issue
+* Step-by-step instructions to reproduce the issue
+* The location of the affected source code (tag/branch/commit or direct URL)
+* Full paths of source file(s) related to the manifestation of the issue
+* Configuration required to reproduce the issue
+* Log files that are related to this issue (if possible)
+* Proof-of-concept or exploit code (if possible)
 
-## About this repository
-This repository contains only sample code for learning and evaluation purposes. It is not part of the core Eclipse ThreadX release process. 
+This information will help us triage your report more quickly.
+
+## Supported Versions
+
+| Version | Supported          |
+| ------- | ------------------ |
+| 6.5.x   | :white_check_mark: |
+
+Eclipse ThreadX publishes a release every quarter. There are no long-term support branches or backports to older releases. 
+
+Normally, fixes for non-critical vulnerabilities will ship in a regularly scheduled quarterly release. If fixes for an urgent or critical vulnerability must ship quickly, then the project will publish a hotfix release of the affected component(s) without waiting for the next quarterly release.
+
+You can learn more about the [project's release cadence in this blog post](https://blogs.eclipse.org/post/fr%C3%A9d%C3%A9ric-desbiens/eclipse-threadx-more-predictable-more-open). 
