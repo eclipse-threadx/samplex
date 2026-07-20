@@ -7,12 +7,16 @@
 [submodule "libs/threadx"]
 	path = libs/threadx
 	url = https://github.com/eclipse-threadx/threadx.git
+	branch = dev
 [submodule "libs/netxduo"]
 	path = libs/netxduo
 	url = https://github.com/eclipse-threadx/netxduo.git
+	branch = dev
 [submodule "libs/usbx"]
 	path = libs/usbx
 	url = https://github.com/eclipse-threadx/usbx.git
+	branch = dev
 [submodule "libs/filex"]
 	path = libs/filex
 	url = https://github.com/eclipse-threadx/filex.git
+	branch = dev
