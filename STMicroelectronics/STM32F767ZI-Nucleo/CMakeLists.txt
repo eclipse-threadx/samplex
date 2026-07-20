@@ -142,6 +142,7 @@ if(USE_NETXDUO)
         STM32F767xx
         USE_HAL_DRIVER
         STM32F7
+        STM32_ETH_HAL_LEGACY
     )
     
     target_link_libraries(netx_stm32_driver PUBLIC
@@ -152,4 +153,3 @@ endif()
 
 # 3. Add the active demo subdirectory to build the executable target
 add_subdirectory(app/demos/${ACTIVE_DEMO})
-
