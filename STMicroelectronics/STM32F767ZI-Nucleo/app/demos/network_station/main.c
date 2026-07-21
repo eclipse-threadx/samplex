@@ -524,10 +524,11 @@ static void network_thread_entry(ULONG thread_input)
         static UINT dns_initialized = NX_FALSE;
         if (!dns_initialized)
         {
-            ULONG dns_server = IP_ADDRESS(8, 8, 8, 8); /* Fallback to Google DNS */
+            /* Fallback to Google DNS */
+            ULONG dns_server = IP_ADDRESS(8, 8, 8, 8);
             UINT size = sizeof(dns_server);
-            UINT status = nx_dhcp_user_option_retrieve(&dhcp_client, NX_DHCP_OPTION_DNS_SVR, (UCHAR *)&dns_server, &size);
-            
+            status = nx_dhcp_user_option_retrieve(&dhcp_client, NX_DHCP_OPTION_DNS_SVR, (UCHAR *)&dns_server, &size);
+
             if (status != NX_SUCCESS)
             {
                 printf(ANSI_BLUE "[DNS] " ANSI_YELLOW "Warning: Failed to retrieve DHCP DNS option (0x%02X). Using fallback Google DNS.\r\n" ANSI_RESET, status);
@@ -589,8 +590,12 @@ static void network_thread_entry(ULONG thread_input)
                 /* Check if the link was lost while waiting for the message */
                 if (!ip_resolved || !mqtt_connected)
                 {
-                    /* Put the message back in the queue so it is not lost */
-                    tx_queue_send(&network_queue, &msg, TX_NO_WAIT);
+                    /* Put the message back so its not lost */
+                    UINT queue_status = tx_queue_front_send(&network_queue, &msg, TX_NO_WAIT);
+                    if (queue_status != TX_SUCCESS)
+                    {
+                        printf(ANSI_BLUE "[Network Thread] " ANSI_RED "Error: Failed to re-queue message to front (0x%02X).\r\n" ANSI_RESET, queue_status);
+                    }
                     break;
                 }
 
