@@ -525,8 +525,13 @@ static void network_thread_entry(ULONG thread_input)
         if (!dns_initialized)
         {
             ULONG dns_server = IP_ADDRESS(8, 8, 8, 8); /* Fallback to Google DNS */
-            UINT size;
-            nx_dhcp_user_option_retrieve(&dhcp_client, NX_DHCP_OPTION_DNS_SVR, (UCHAR *)&dns_server, &size);
+            UINT size = sizeof(dns_server);
+            UINT status = nx_dhcp_user_option_retrieve(&dhcp_client, NX_DHCP_OPTION_DNS_SVR, (UCHAR *)&dns_server, &size);
+            
+            if (status != NX_SUCCESS)
+            {
+                printf(ANSI_BLUE "[DNS] " ANSI_YELLOW "Warning: Failed to retrieve DHCP DNS option (0x%02X). Using fallback Google DNS.\r\n" ANSI_RESET, status);
+            }
             
             if (nx_dns_create(&dns_client, &ip_0, (UCHAR *)"DNS Client") == NX_SUCCESS)
             {
@@ -608,6 +613,11 @@ static void network_thread_entry(ULONG thread_input)
                     mqtt_connected = NX_FALSE;
                 }
             }
+        }
+
+        if (mqtt_connected)
+        {
+            nxd_mqtt_client_disconnect(&mqtt_client);
         }
 
         mqtt_connected = NX_FALSE;

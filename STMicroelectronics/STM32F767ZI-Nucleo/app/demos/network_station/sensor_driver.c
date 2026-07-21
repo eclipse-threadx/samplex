@@ -104,25 +104,80 @@ sensor_status_t sensor_init(void)
     printf("[Sensor] Physical HTS221 detected (WHO_AM_I = 0x%02X).\r\n", whoamI);
 
     /* Read humidity calibration coefficients */
-    hts221_hum_adc_point_0_get(&dev_ctx, &lin_hum.x0);
-    hts221_hum_rh_point_0_get(&dev_ctx, &lin_hum.y0);
-    hts221_hum_adc_point_1_get(&dev_ctx, &lin_hum.x1);
-    hts221_hum_rh_point_1_get(&dev_ctx, &lin_hum.y1);
+    if (hts221_hum_adc_point_0_get(&dev_ctx, &lin_hum.x0) != 0)
+    {
+        printf("[Sensor] WARNING: H0_T0_OUT read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
+    if (hts221_hum_rh_point_0_get(&dev_ctx, &lin_hum.y0) != 0)
+    {
+        printf("[Sensor] WARNING: H0_rH read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
+    if (hts221_hum_adc_point_1_get(&dev_ctx, &lin_hum.x1) != 0)
+    {
+        printf("[Sensor] WARNING: H1_T0_OUT read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
+    if (hts221_hum_rh_point_1_get(&dev_ctx, &lin_hum.y1) != 0)
+    {
+        printf("[Sensor] WARNING: H1_rH read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
 
     /* Read temperature calibration coefficients */
-    hts221_temp_adc_point_0_get(&dev_ctx, &lin_temp.x0);
-    hts221_temp_deg_point_0_get(&dev_ctx, &lin_temp.y0);
-    hts221_temp_adc_point_1_get(&dev_ctx, &lin_temp.x1);
-    hts221_temp_deg_point_1_get(&dev_ctx, &lin_temp.y1);
+    if (hts221_temp_adc_point_0_get(&dev_ctx, &lin_temp.x0) != 0)
+    {
+        printf("[Sensor] WARNING: T0_OUT read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
+    if (hts221_temp_deg_point_0_get(&dev_ctx, &lin_temp.y0) != 0)
+    {
+        printf("[Sensor] WARNING: T0_degC read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
+    if (hts221_temp_adc_point_1_get(&dev_ctx, &lin_temp.x1) != 0)
+    {
+        printf("[Sensor] WARNING: T1_OUT read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
+    if (hts221_temp_deg_point_1_get(&dev_ctx, &lin_temp.y1) != 0)
+    {
+        printf("[Sensor] WARNING: T1_degC read failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
 
     /* Enable Block Data Update (BDU) - prevents reading partial data */
-    hts221_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+    if (hts221_block_data_update_set(&dev_ctx, PROPERTY_ENABLE) != 0)
+    {
+        printf("[Sensor] WARNING: Enable BDU write failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
 
     /* Set Output Data Rate to 1Hz */
-    hts221_data_rate_set(&dev_ctx, HTS221_ODR_1Hz);
+    if (hts221_data_rate_set(&dev_ctx, HTS221_ODR_1Hz) != 0)
+    {
+        printf("[Sensor] WARNING: Set ODR write failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
 
     /* Power on the device */
-    hts221_power_on_set(&dev_ctx, PROPERTY_ENABLE);
+    if (hts221_power_on_set(&dev_ctx, PROPERTY_ENABLE) != 0)
+    {
+        printf("[Sensor] WARNING: Power on write failed. Switching to MOCK mode.\r\n");
+        mock_mode_active = 1;
+        return mock_sensor_init();
+    }
 
     printf("[Sensor] Physical HTS221 initialized successfully.\r\n");
     mock_mode_active = 0;

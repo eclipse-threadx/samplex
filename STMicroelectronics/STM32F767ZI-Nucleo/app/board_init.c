@@ -311,10 +311,11 @@ void board_ethernet_init(void)
    both before and after the ThreadX scheduler starts. */
 uint32_t HAL_GetTick(void)
 {
-    /* If the ThreadX scheduler is running, use the ThreadX time */
+    /* If the ThreadX scheduler is running, use the ThreadX time converted to milliseconds.
+       Perform intermediate multiplication in 64-bit space to prevent early integer overflow. */
     if (tx_thread_identify() != TX_NULL)
     {
-        return (uint32_t)tx_time_get();
+        return (uint32_t)(((uint64_t)tx_time_get() * 1000) / TX_TIMER_TICKS_PER_SECOND);
     }
     else
     {
