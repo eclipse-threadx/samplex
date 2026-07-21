@@ -586,6 +586,14 @@ static void network_thread_entry(ULONG thread_input)
             /* Retrieve messages from the network forwarding queue (blocks until available) */
             if (tx_queue_receive(&network_queue, &msg, 500) == TX_SUCCESS)
             {
+                /* Check if the link was lost while waiting for the message */
+                if (!ip_resolved || !mqtt_connected)
+                {
+                    /* Put the message back in the queue so it is not lost */
+                    tx_queue_send(&network_queue, &msg, TX_NO_WAIT);
+                    break;
+                }
+
                 float temp_abs = (msg.temperature < 0.0f) ? -msg.temperature : msg.temperature;
                 int temp_dec = (int)temp_abs;
                 int temp_frac = (int)((temp_abs - (float)temp_dec) * 100.0f);
