@@ -91,7 +91,7 @@ int main(void)
     board_init();
 
     printf(ANSI_BOLD ANSI_CYAN "\r\n==================================================\r\n" ANSI_RESET);
-    printf(ANSI_BOLD ANSI_CYAN "  Network Environmental Station Demo - Phase 3   \r\n" ANSI_RESET);
+    printf(ANSI_BOLD ANSI_CYAN "  Network Environmental Station Demo   \r\n" ANSI_RESET);
     printf(ANSI_BOLD ANSI_CYAN "==================================================\r\n" ANSI_RESET);
 
     /* Initialize the Ethernet hardware, MAC, and wait for link to be established */
