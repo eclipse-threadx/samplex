@@ -9,6 +9,7 @@
  *
  *  Contributors:
  *     Ali Eissa - 2026 version.
+ *     Jacob Rosén - STM32F429ZI adaptation
  */
 
 #include "board_init.h"
@@ -43,6 +44,9 @@ uint8_t input_thread_stack[INPUT_THREAD_STACK_SIZE];
 #define MESSAGE_SIZE_WORDS 1
 TX_QUEUE msg_queue;
 ULONG queue_buffer[QUEUE_MAX_MESSAGES * MESSAGE_SIZE_WORDS];
+
+/* 6. printF Mutex */
+TX_MUTEX printf_mutex;
 
 /* Thread Function Prototypes */
 void green_thread_entry(ULONG thread_input);
@@ -125,6 +129,11 @@ void tx_application_define(void *first_unused_memory)
                      5,
                      TX_NO_TIME_SLICE,
                      TX_AUTO_START);
+
+    /* Mutex 1: Printf guard */
+    tx_mutex_create(&printf_mutex,
+                    "Printf Guard",
+                    TX_NO_INHERIT);
 }
 
 /**
@@ -136,9 +145,11 @@ void green_thread_entry(ULONG thread_input)
 {
     (void)thread_input;
 
+    tx_mutex_get(&printf_mutex, TX_WAIT_FOREVER);
     printf(ANSI_BOLD ANSI_CYAN "\r\n==========================================\r\n" ANSI_RESET);
     printf(ANSI_BOLD ANSI_CYAN "ThreadX Multitasking Edge Node Demo Booted!\r\n" ANSI_RESET);
     printf(ANSI_BOLD ANSI_CYAN "==========================================\r\n\r\n" ANSI_RESET);
+    tx_mutex_put(&printf_mutex);
 
     while (1)
     {
@@ -208,7 +219,9 @@ void logger_thread_entry(ULONG thread_input)
         /* Block until a message arrives in the queue */
         if (tx_queue_receive(&msg_queue, &received_ticks, TX_WAIT_FOREVER) == TX_SUCCESS)
         {
+            tx_mutex_get(&printf_mutex, TX_WAIT_FOREVER);
             printf("\x1b[38;5;243m[LOG]" ANSI_RESET " " MSG_SUCCESS "Button Pressed! System Tick Count: %lu\r\n" ANSI_RESET, received_ticks);
+            tx_mutex_put(&printf_mutex);
         }
     }
 }
@@ -232,7 +245,7 @@ void USART3_IRQHandler(void)
     if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE))
     {
         /* Read data register directly to clear RXNE flag and get the byte */
-        char ch = (char)(huart3.Instance->RDR & 0xFF);
+        char ch = (char)(huart3.Instance->DR & 0xFF);
 
         /* Insert into circular ring buffer if not full */
         int next_head = (ring_head + 1) % RING_BUF_SIZE;
@@ -244,17 +257,24 @@ void USART3_IRQHandler(void)
     }
 
     /* Clear any hardware error flags to prevent lockups */
-    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_ORE))
+    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_ORE | UART_FLAG_FE | UART_FLAG_NE | UART_FLAG_PE))
     {
-        __HAL_UART_CLEAR_FLAG(&huart3, UART_CLEAR_OREF);
-    }
-    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_FE))
-    {
-        __HAL_UART_CLEAR_FLAG(&huart3, UART_CLEAR_FEF);
-    }
-    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_NE))
-    {
-        __HAL_UART_CLEAR_FLAG(&huart3, UART_CLEAR_NEF);
+        /* Hardware error clear procedure is a two step process:
+         *  1. Read out the SR register
+         *  2. Read or write to DR register
+         * The read of SR register is done in the condition of the if case, and the DR register
+         * access is done inside of the case as follows:
+         */
+
+        char ch = (char)(huart3.Instance->DR & 0xFF);
+
+        /* Insert into circular ring buffer if not full */
+        int next_head = (ring_head + 1) % RING_BUF_SIZE;
+        if (next_head != ring_tail)
+        {
+            ring_buf[ring_head] = ch;
+            ring_head = next_head;
+        }
     }
 }
 
@@ -278,10 +298,9 @@ void input_thread_entry(ULONG thread_input)
     ring_tail = 0;
 
     /* Clear any pending error flags and purge hardware receive register */
-    __HAL_UART_CLEAR_FLAG(&huart3, UART_CLEAR_OREF | UART_CLEAR_FEF | UART_CLEAR_NEF);
-    (void)huart3.Instance->RDR;
+    __HAL_UART_CLEAR_PEFLAG(&huart3);
 
-    /* Enable USART3 Interrupts in the Cortex-M7 NVIC */
+    /* Enable USART3 Interrupts in the Cortex-M4 NVIC */
     HAL_NVIC_SetPriority(USART3_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
 
@@ -302,7 +321,9 @@ void input_thread_entry(ULONG thread_input)
                 if (line_index > 0)
                 {
                     line_buffer[line_index] = '\0';
+                    tx_mutex_get(&printf_mutex, TX_WAIT_FOREVER);
                     printf(" -> \x1b[38;5;243m[CONSOLE]" ANSI_RESET " " MSG_INFO "Received string: \"%s\"\r\n" ANSI_RESET, line_buffer);
+                    tx_mutex_put(&printf_mutex);
 
                     /* Flash LD3 to signal successful reception */
                     LED3_ON();

@@ -15,7 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set the toolchain if not defined
 if(NOT CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/cmake/arm-gcc-cortex-m7.cmake")
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/cmake/arm-gcc-cortex-m4.cmake")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
@@ -23,28 +23,28 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 include(utilities)
 
 # Define the Project
-project(stm32f767_threadx C CXX ASM)
+project(stm32f429_threadx C CXX ASM)
 
 # Select the active demo to build (threadx_basic)
 set(ACTIVE_DEMO "threadx_basic" CACHE STRING "Active demo name to build: threadx_basic")
 
 # Set up standard paths for find modules
-set(STM32_FAMILY "F7")
-set(STM32Cube_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/stm32cubef7")
+set(STM32_FAMILY "F4")
+set(STM32Cube_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/stm32cubef4")
 
 # Find CMSIS and HAL driver packages
 find_package(CMSIS REQUIRED)
-find_package(STM32HAL REQUIRED COMPONENTS cortex pwr rcc gpio uart dma eth i2c)
+find_package(STM32HAL REQUIRED COMPONENTS cortex pwr rcc gpio uart dma)
 
-# Compile the STM32F7xx HAL Driver Library as an Object Library
-set(HAL_TARGET stm32cubef7)
+# Compile the STM32F4xx HAL Driver Library as an Object Library
+set(HAL_TARGET stm32cubef4)
 add_library(${HAL_TARGET} OBJECT ${STM32HAL_SOURCES})
 
 target_compile_definitions(${HAL_TARGET}
     PUBLIC
-        STM32F767xx
+        STM32F429xx
         USE_HAL_DRIVER
-        STM32F7
+        STM32F4
 )
 
 target_include_directories(${HAL_TARGET}
@@ -76,25 +76,14 @@ endif()
 set(THREADX_DIR "${CMAKE_CURRENT_LIST_DIR}/../../libs/threadx")
 add_subdirectory(${THREADX_DIR} threadx)
 
-# Compile FileX Filesystem from root shared libs submodule
-set(FILEX_DIR "${CMAKE_CURRENT_LIST_DIR}/../../libs/filex")
-add_subdirectory(${FILEX_DIR} filex)
-
-if(USE_NETXDUO)
-    # Compile NetX Duo TCP/IP Stack from root shared libs submodule
-    set(NXD_ENABLE_FILE_SERVERS OFF CACHE BOOL "Disable FileX dependency in NetX Duo" FORCE)
-    set(NETXDUO_DIR "${CMAKE_CURRENT_LIST_DIR}/../../libs/netxduo")
-    add_subdirectory(${NETXDUO_DIR} netxduo)
-endif()
-
 # 1. Define the Board BSP static library
 add_library(board_bsp OBJECT
-    app/startup/startup_stm32f767zitx.s
-    app/startup/system_stm32f7xx.c
+    app/startup/startup_stm32f429xx.s
+    app/startup/system_stm32f4xx.c
     app/startup/tx_initialize_low_level.S
     app/board_init.c
     app/console.c
-    app/stm32f7xx_hal_msp.c
+    app/stm32f4xx_hal_msp.c
     app/sysmem.c
     app/syscalls.c
 )
@@ -109,46 +98,16 @@ target_include_directories(board_bsp PUBLIC
 
 # Compile definitions for BSP
 target_compile_definitions(board_bsp PRIVATE
-    STM32F767xx
+    STM32F429xx
     USE_HAL_DRIVER
-    STM32F7
+    STM32F4
 )
 
 # Link libraries for BSP (HAL and CMSIS)
 target_link_libraries(board_bsp PUBLIC
-    stm32cubef7
+    stm32cubef4
     threadx
 )
-
-
-# 2. Define conditional NetX Duo driver library target
-if(USE_NETXDUO)
-    add_library(netx_stm32_driver OBJECT
-        lib/netxduo/nx_stm32_eth_driver.c
-        lib/netxduo/nx_stm32_phy_driver.c
-        lib/netxduo/lan8742.c
-    )
-
-    # NetX driver needs its local files, HAL, CMSIS, ThreadX, NetX Duo and the active demo folder (for nx_stm32_eth_config.h and nx_user.h)
-    target_include_directories(netx_stm32_driver PUBLIC
-        ${CMAKE_CURRENT_LIST_DIR}/lib/netxduo
-        ${CMAKE_CURRENT_LIST_DIR}/app/demos/${ACTIVE_DEMO}
-        ${CMAKE_CURRENT_LIST_DIR}/app
-        ${CMSIS_INCLUDE_DIRS}
-        ${STM32HAL_INCLUDE_DIR}
-    )
-
-    target_compile_definitions(netx_stm32_driver PRIVATE
-        STM32F767xx
-        USE_HAL_DRIVER
-        STM32F7
-    )
-
-    target_link_libraries(netx_stm32_driver PUBLIC
-        netxduo
-        stm32cubef7
-    )
-endif()
 
 # 3. Add the active demo subdirectory to build the executable target
 add_subdirectory(app/demos/${ACTIVE_DEMO})

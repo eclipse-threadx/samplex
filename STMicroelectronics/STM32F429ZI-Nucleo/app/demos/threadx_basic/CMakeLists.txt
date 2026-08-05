@@ -8,6 +8,7 @@
 #
 #  Contributors:
 #     Ali Eissa - 2026 version.
+#     Jacob Rosén - STM32F429ZI adaptation
 
 add_executable(${PROJECT_NAME}
     main.c
@@ -16,9 +17,9 @@ add_executable(${PROJECT_NAME}
 # Set compile definitions for our executable
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
-        STM32F767xx
+        STM32F429xx
         USE_HAL_DRIVER
-        STM32F7
+        STM32F4
 )
 
 # Include paths for the executable target
@@ -33,11 +34,11 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         board_bsp
         threadx
-        stm32cubef7
+        stm32cubef4
 )
 
 # Apply GCC linker script and print memory usage (utilities.cmake function)
-set_target_linker(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/../../startup/STM32F767ZITx_FLASH.ld")
+set_target_linker(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/../../startup/STM32F429xx_FLASH.ld")
 
 # Post-build commands to generate raw .bin and .hex files
 post_build(${PROJECT_NAME})
