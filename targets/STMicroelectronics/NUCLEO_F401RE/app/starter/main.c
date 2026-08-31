@@ -8,15 +8,24 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <errno.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "tx_api.h"
 #include "bsp/board.h"
 #include "bsp/led.h"
 #include "bsp/console.h"
+#include "board_config.h"
 #include "cloud_config.h"
+#include "stm32f4xx_hal.h"
 
 #define THREAD_STACK_SIZE 1024
+
+/* Bytes of SRAM held back above the ThreadX byte pool for the main stack,
+ * which serves every interrupt handler once the scheduler is running. */
+#define MAIN_STACK_MARGIN 4096
 
 typedef struct {
   CHAR *name;
@@ -348,9 +357,9 @@ void tx_application_define(void *first_unused_memory) {
   CHAR *stack_ptr;
   ULONG pool_size;
 
-  /* Calculate available RAM for the byte pool, leaving 4KB margin for system
-   * stack at the top (0x20018000) */
-  pool_size = (0x20018000 - 4096) - (ULONG)first_unused_memory;
+  /* Calculate available RAM for the byte pool, leaving a 4 KB margin for the
+   * main stack at the top of SRAM. */
+  pool_size = (BSP_RAM_END - MAIN_STACK_MARGIN) - (ULONG)first_unused_memory;
 
   /* Initialize the byte pool */
   status = tx_byte_pool_create(&byte_pool, "system byte pool",
@@ -540,8 +549,101 @@ void tx_application_define(void *first_unused_memory) {
   thread_registry[8] = &semaphore_thread;
 }
 
+/* ------------------------------------------------------------------------- *
+ * Startup self-tests
+ *
+ * These run before tx_kernel_enter() so a failure is reported even when the
+ * scheduler never starts. scripts/test_renode.py asserts on the summary line.
+ * ------------------------------------------------------------------------- */
+
+/* Defined by NUCLEO_F401RE.ld rather than by any translation unit. */
+extern char _end;
+extern char _heap_limit;
+extern char __RAM_segment_used_end__;
+
+extern void *_sbrk(ptrdiff_t incr);
+
+static unsigned selftest_failures = 0;
+
+static void selftest_report(int passed, const char *message) {
+  if (passed) {
+    printf("[+] PASS: %s\r\n", message);
+  } else {
+    selftest_failures++;
+    printf("[-] FAIL: %s\r\n", message);
+  }
+}
+
+static void run_startup_self_tests(void) {
+  const uintptr_t heap_base  = (uintptr_t)&_end;
+  const uintptr_t heap_limit = (uintptr_t)&_heap_limit;
+  const uintptr_t pool_base  = (uintptr_t)&__RAM_segment_used_end__;
+  char msg[128];
+
+  printf("[SELF-TEST] Starting BSP & Runtime Verification...\r\n");
+
+  /* 1. A modest request lands inside the heap reservation. */
+  void *p_ok = _sbrk(64);
+  selftest_report((p_ok != (void *)-1) && ((uintptr_t)p_ok >= heap_base) &&
+                      ((uintptr_t)p_ok < heap_limit),
+                  "_sbrk() valid allocation inside the heap reservation");
+
+  /* 2. Releasing it returns the break to the heap base, leaving the heap
+   * exactly as the remaining tests found it. */
+  selftest_report(_sbrk(-64) != (void *)-1,
+                  "_sbrk() released 64 bytes back to the heap base");
+
+  /* 3. Shrinking below the heap base is rejected. */
+  errno = 0;
+  void *p_under = _sbrk(-128);
+  selftest_report((p_under == (void *)-1) && (errno == EINVAL),
+                  "_sbrk() underflow guard rejected with EINVAL");
+
+  /* 4. Regression guard for the heap bound. 32 KB fits inside the 96 KB SRAM
+   * but far exceeds the heap reservation, so bounding _sbrk() against the end
+   * of SRAM rather than _heap_limit let this succeed and handed malloc()
+   * memory owned by the ThreadX byte pool and the main stack. */
+  errno = 0;
+  void *p_over = _sbrk((ptrdiff_t)0x8000);
+  selftest_report((p_over == (void *)-1) && (errno == ENOMEM),
+                  "_sbrk() rejects a request that fits SRAM but not the heap");
+
+  /* 5. The heap reservation must end at or below the first byte ThreadX owns. */
+  snprintf(msg, sizeof(msg),
+           "heap [0x%08lX,0x%08lX) ends at or below the ThreadX pool at 0x%08lX",
+           (unsigned long)heap_base, (unsigned long)heap_limit,
+           (unsigned long)pool_base);
+  selftest_report(heap_limit <= pool_base, msg);
+
+  /* 6. SystemClock_Config() reached the documented 84 MHz. */
+  snprintf(msg, sizeof(msg), "SystemCoreClock is %lu Hz (expected %lu Hz)",
+           (unsigned long)SystemCoreClock, (unsigned long)BSP_CPU_CLOCK_HZ);
+  selftest_report(SystemCoreClock == (uint32_t)BSP_CPU_CLOCK_HZ, msg);
+
+  /* 7. The HAL timebase runs on TIM2 so ThreadX keeps SysTick. HAL_InitTick()
+   * is re-entered by HAL_RCC_ClockConfig() once the PLL is live, so confirm the
+   * timer is still ticking afterwards. The spin cap is a liveness bound, not a
+   * timing expectation: one TIM2 tick is ~84000 core cycles. */
+  uint32_t tick_start = HAL_GetTick();
+  uint32_t spins = 0;
+  while ((HAL_GetTick() == tick_start) && (spins < 5000000UL)) {
+    spins++;
+  }
+  selftest_report(HAL_GetTick() != tick_start,
+                  "HAL timebase (TIM2) tick advancing");
+
+  if (selftest_failures == 0) {
+    printf("[SELF-TEST] All startup verification tests PASSED!\r\n\r\n");
+  } else {
+    printf("[SELF-TEST] %u startup verification test(s) FAILED!\r\n\r\n",
+           selftest_failures);
+  }
+}
+
 int main(void) {
   bsp_board_init();
+
+  run_startup_self_tests();
 
   /* Start the ThreadX kernel */
   tx_kernel_enter();

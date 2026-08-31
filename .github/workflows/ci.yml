@@ -139,3 +139,36 @@ jobs:
           name: nucleo-f401re-demo-elf
           path: targets/STMicroelectronics/NUCLEO_F401RE/build/app/nucleo_f401re.elf
           retention-days: 1
+
+  test-nucleo-renode:
+    name: Headless Renode Emulation & Assertion Test (NUCLEO-F401RE)
+    needs: build-arm-nucleo
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download Built NUCLEO-F401RE ELF
+        uses: actions/download-artifact@v4
+        with:
+          name: nucleo-f401re-demo-elf
+          path: targets/STMicroelectronics/NUCLEO_F401RE/build/app
+
+      - name: Install Portable Renode Emulation Environment
+        run: |
+          wget -q https://builds.renode.io/renode-latest.linux-portable.tar.gz
+          mkdir -p $HOME/renode
+          tar -xzf renode-latest.linux-portable.tar.gz -C $HOME/renode --strip-components=1
+          rm renode-latest.linux-portable.tar.gz
+          echo "$HOME/renode" >> $GITHUB_PATH
+
+      - name: Run Deterministic Headless Renode Test
+        run: |
+          python3 targets/STMicroelectronics/NUCLEO_F401RE/scripts/test_renode.py

@@ -50,6 +50,59 @@ The package includes build scripts under the `scripts/` directory for convenienc
 
 These scripts clean the build directory, run CMake configuration, and compile the target executable.
 
+## Emulation & Regression Testing
+
+Renode ships no NUCLEO-F401RE board description, so `renode/nucleo_f401re.repl`
+derives one from the generic STM32F4 CPU platform, correcting Flash to 512 KB
+and SRAM to 96 KB. Those limits matter: the linker script's heap reservation and
+the `_sbrk()` bound both depend on them.
+
+### Interactive Simulation
+
+```bash
+renode targets/STMicroelectronics/NUCLEO_F401RE/renode/nucleo_f401re_demo.resc
+```
+
+USART2 is the demo console, shown in a terminal analyzer.
+
+### Automated Headless Test
+
+```bash
+python3 targets/STMicroelectronics/NUCLEO_F401RE/scripts/test_renode.py
+```
+
+Runs `nucleo_f401re_ci.resc`, which advances a fixed span of virtual time and
+quits on its own, so the result does not depend on host speed. Exits non-zero
+if any assertion is unmet. This gates CI as the `test-nucleo-renode` job.
+
+The Robot Framework suite in `renode/nucleo_f401re_demo.robot` covers the same
+ground for use with `renode-test`.
+
+### What is asserted
+
+The demo runs seven startup self-tests before `tx_kernel_enter()` and prints a
+`[SELF-TEST]` summary the harness asserts on:
+
+| # | Self-test | Guards against |
+|---|-----------|----------------|
+| 1 | `_sbrk()` allocation lands inside the heap reservation | heap escaping its linker reservation |
+| 2 | `_sbrk()` releases back to the heap base | broken negative-increment path |
+| 3 | `_sbrk()` underflow rejected with `EINVAL` | shrinking below the heap base |
+| 4 | `_sbrk()` rejects a request that fits SRAM but not the heap | bounding the heap at the end of SRAM |
+| 5 | Heap reservation ends at or below the ThreadX byte pool | linker script layout regression |
+| 6 | `SystemCoreClock` is 84 MHz | a silently wrong PLL configuration |
+| 7 | HAL timebase (TIM2) tick advancing | `HAL_InitTick()` re-entry leaving TIM2 stopped |
+
+Test 4 is the regression guard for the heap bound. Requesting 32 KB fits inside
+the 96 KB SRAM but far exceeds the heap reservation, so bounding `_sbrk()`
+against the end of SRAM rather than `_heap_limit` let it succeed and handed
+`malloc()` memory owned by the ThreadX byte pool and the main stack.
+
+Beyond the self-tests, the harness asserts the boot banner reaches the console,
+the blink thread and the 1 Hz application timer have both run (covering the LED
+path and the timer service), and that the mutex, queue, event-flag and semaphore
+counters are all non-zero.
+
 ## Flashing the Application
 
 Connect the NUCLEO-F401RE board via the ST-LINK USB connector.
@@ -136,14 +189,15 @@ The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and pro
   - **`lib/stm32cubef4/`**: HAL Driver wrapper and platform drivers
   - **`lib/threadx/`**: ThreadX user configuration file (`tx_user.h`)
 - **`cmake/`**: Cross-compilation module definitions
-- **`scripts/`**: Utility build automation scripts
+- **`scripts/`**: Utility build automation scripts and the headless Renode test runner
+- **`renode/`**: Renode platform description, run scripts, and Robot Framework suite
 
 
 ## Validation Record
 
 ### Verification Environment
 - **Toolchain**: Arm GNU Toolchain 14.2.Rel1 (GCC 14.2.1), the version pinned by CI
-- **Static ROM usage**: 20120 Bytes (3.84% of 512 KB Flash)
+- **Static ROM usage**: 22068 Bytes (4.21% of 512 KB Flash), including the startup self-tests
 - **Static RAM usage**: 6000 Bytes (6.10% of 96 KB RAM)
 - **Dynamic Stack & Buffer allocation**: Stacks (8 x 1024 bytes) and Queue buffer (40 bytes) are dynamically allocated from the `TX_BYTE_POOL` (consuming 8312 bytes total, including pool headers).
 - **Board Hardware**: NUCLEO-F401RE

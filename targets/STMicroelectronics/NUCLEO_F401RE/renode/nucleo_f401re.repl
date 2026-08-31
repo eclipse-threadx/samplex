@@ -1,0 +1,22 @@
+// Copyright (c) 2026 Eclipse ThreadX contributors
+//
+// This program and the accompanying materials are made available
+// under the terms of the MIT license which is available at
+// https://opensource.org/license/mit.
+//
+// SPDX-License-Identifier: MIT
+//
+// ST NUCLEO-F401RE (STM32F401RET6, Cortex-M4F).
+//
+// Renode ships no NUCLEO-F401RE board description, so this derives one from the
+// generic STM32F4 CPU platform. That platform is sized for the larger F407/F429
+// parts; the F401RE has 512 KB Flash and 96 KB SRAM, and the demo's linker
+// script and _sbrk() bound both depend on those limits being accurate.
+
+using "platforms/cpus/stm32f4.repl"
+
+sram:
+    size: 0x18000
+
+flash:
+    size: 0x80000
