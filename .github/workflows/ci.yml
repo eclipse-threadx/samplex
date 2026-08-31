@@ -21,6 +21,12 @@ jobs:
     name: Build PolarFire SoC Icicle Kit (64-Bit RISC-V)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+
+    env:
+      XPACK_VERSION: 14.3.0-1
+      XPACK_TARBALL: xpack-riscv-none-elf-gcc-14.3.0-1-linux-x64.tar.gz
+      XPACK_SHA256: be1768ef22789f4d9c41384e0261996f51724b84c2efa940d975dd7d9938c726
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -32,18 +38,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
 
-      - name: Install Pinned xPack RISC-V GCC 14.3.0
-        env:
-          XPACK_TARBALL: xpack-riscv-none-elf-gcc-14.3.0-1-linux-x64.tar.gz
-          XPACK_SHA256: be1768ef22789f4d9c41384e0261996f51724b84c2efa940d975dd7d9938c726
+      - name: Cache the xPack RISC-V toolchain
+        id: cache-xpack
+        uses: actions/cache@v4
+        with:
+          path: ~/riscv-gcc
+          key: xpack-riscv-none-elf-gcc-${{ env.XPACK_VERSION }}-linux-x64
+
+      - name: Install Pinned xPack RISC-V GCC
+        if: steps.cache-xpack.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          wget -q "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v14.3.0-1/${XPACK_TARBALL}"
+          wget -q "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${XPACK_VERSION}/${XPACK_TARBALL}"
           echo "${XPACK_SHA256}  ${XPACK_TARBALL}" | sha256sum --check --strict
           mkdir -p $HOME/riscv-gcc
           tar -xzf "${XPACK_TARBALL}" -C $HOME/riscv-gcc --strip-components=1
           rm "${XPACK_TARBALL}"
-          echo "$HOME/riscv-gcc/bin" >> $GITHUB_PATH
+
+      - name: Put the RISC-V toolchain on PATH
+        run: echo "$HOME/riscv-gcc/bin" >> $GITHUB_PATH
+
+      - name: Report the toolchain version
+        run: riscv-none-elf-gcc --version
 
       - name: Build SampleX PolarFire Condition-Monitoring Demo
         run: |
@@ -67,6 +83,10 @@ jobs:
     runs-on: ubuntu-24.04
     # Backstop in case Renode itself wedges before the in-script deadline fires.
     timeout-minutes: 15
+    env:
+      RENODE_VERSION: 1.16.1
+      RENODE_SHA256: 1a532d4b5b82de0dd154970c401e0c7b0e498d17304b2cecc007e306c8f9617c
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -84,10 +104,15 @@ jobs:
           name: polarfire-demo-elf
           path: targets/Microchip/POLARFIRE_ICICLE_RENODE/build/app
 
+      - name: Cache the portable Renode environment
+        id: cache-renode
+        uses: actions/cache@v4
+        with:
+          path: ~/renode
+          key: renode-${{ env.RENODE_VERSION }}-linux-portable
+
       - name: Install Pinned Portable Renode Emulation Environment
-        env:
-          RENODE_VERSION: 1.16.1
-          RENODE_SHA256: 1a532d4b5b82de0dd154970c401e0c7b0e498d17304b2cecc007e306c8f9617c
+        if: steps.cache-renode.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           TARBALL="renode-${RENODE_VERSION}.linux-portable.tar.gz"
@@ -96,7 +121,9 @@ jobs:
           mkdir -p $HOME/renode
           tar -xzf "${TARBALL}" -C $HOME/renode --strip-components=1
           rm "${TARBALL}"
-          echo "$HOME/renode" >> $GITHUB_PATH
+
+      - name: Put Renode on PATH
+        run: echo "$HOME/renode" >> $GITHUB_PATH
 
       - name: Run Deterministic Headless Renode Test
         run: |
@@ -174,6 +201,10 @@ jobs:
     name: Headless Renode Emulation & Assertion Test (NUCLEO-F401RE)
     needs: build-arm-nucleo
     runs-on: ubuntu-24.04
+    env:
+      RENODE_VERSION: 1.16.1
+      RENODE_SHA256: 1a532d4b5b82de0dd154970c401e0c7b0e498d17304b2cecc007e306c8f9617c
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -191,13 +222,26 @@ jobs:
           name: nucleo-f401re-demo-elf
           path: targets/STMicroelectronics/NUCLEO_F401RE/build/app
 
-      - name: Install Portable Renode Emulation Environment
+      - name: Cache the portable Renode environment
+        id: cache-renode
+        uses: actions/cache@v4
+        with:
+          path: ~/renode
+          key: renode-${{ env.RENODE_VERSION }}-linux-portable
+
+      - name: Install Pinned Portable Renode Emulation Environment
+        if: steps.cache-renode.outputs.cache-hit != 'true'
         run: |
-          wget -q https://builds.renode.io/renode-latest.linux-portable.tar.gz
+          set -euo pipefail
+          TARBALL="renode-${RENODE_VERSION}.linux-portable.tar.gz"
+          wget -q "https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/${TARBALL}"
+          echo "${RENODE_SHA256}  ${TARBALL}" | sha256sum --check --strict
           mkdir -p $HOME/renode
-          tar -xzf renode-latest.linux-portable.tar.gz -C $HOME/renode --strip-components=1
-          rm renode-latest.linux-portable.tar.gz
-          echo "$HOME/renode" >> $GITHUB_PATH
+          tar -xzf "${TARBALL}" -C $HOME/renode --strip-components=1
+          rm "${TARBALL}"
+
+      - name: Put Renode on PATH
+        run: echo "$HOME/renode" >> $GITHUB_PATH
 
       - name: Run Deterministic Headless Renode Test
         run: |
