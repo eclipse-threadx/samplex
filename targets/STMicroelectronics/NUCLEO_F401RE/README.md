@@ -196,8 +196,8 @@ The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and pro
 ## Validation Record
 
 ### Verification Environment
-- **Toolchain**: Arm GNU Toolchain 14.2.Rel1 (GCC 14.2.1), the version pinned by CI
-- **Static ROM usage**: 22068 Bytes (4.21% of 512 KB Flash), including the startup self-tests
+- **Toolchain**: Arm GNU Toolchain 14.3.Rel1 (GCC 14.3.1), the version pinned by CI and by the ThreadX Cortex-M ports
+- **Static ROM usage**: 22064 Bytes (4.21% of 512 KB Flash), including the startup self-tests
 - **Static RAM usage**: 6000 Bytes (6.10% of 96 KB RAM)
 - **Dynamic Stack & Buffer allocation**: Stacks (8 x 1024 bytes) and Queue buffer (40 bytes) are dynamically allocated from the `TX_BYTE_POOL` (consuming 8312 bytes total, including pool headers).
 - **Board Hardware**: NUCLEO-F401RE
