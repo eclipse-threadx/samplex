@@ -15,8 +15,9 @@ set(SOURCES
     # ${COMMON_DIR}/startup/startup_mcu.s
     # ${COMMON_DIR}/startup/tx_initialize_low_level.S
 
-    # Link the shared platform-independent ThreadX application
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../apps/threadx_demo/main.c
+    # This target's ThreadX application. Applications are target-resident:
+    # there is no shared apps/ directory to link one from.
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.c
 
     # Link GCC Newlib syscall stubs
     ${CMAKE_CURRENT_SOURCE_DIR}/../lib/bsp/src/newlib_stubs.c

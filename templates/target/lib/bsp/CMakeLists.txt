@@ -16,7 +16,7 @@ add_library(target_bsp STATIC
 # Export BSP headers and shared abstract C BSP headers to PUBLIC include paths
 target_include_directories(target_bsp PUBLIC
     include
-    ${CMAKE_CURRENT_LIST_DIR}/../../../../../bsp/include
+    ${SHARED_BSP_DIR}/include
 )
 
 # Link ThreadX and vendor HAL dependencies if required
