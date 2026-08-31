@@ -12,11 +12,11 @@ This directory contains the skeletal blueprint for onboarding a new hardware boa
 
 ## 1. Dependency Flow Architecture
 
-The following diagram illustrates how the generic application layer is decoupled from physical MCU registers using the BSP framework:
+The following diagram illustrates how application code reaches hardware through the BSP framework rather than through vendor registers directly:
 
 ```mermaid
 flowchart TD
-    App["Generic Application (apps/threadx_demo/main.c)"]
+    App["Application (targets/&lt;Vendor&gt;/&lt;Board&gt;/app/)"]
     BSP_API["BSP Interface Contract (bsp/include/bsp/)"]
     Target_BSP["Target BSP Driver Library (targets/&lt;Vendor&gt;/&lt;Board&gt;/lib/bsp/)"]
     Vendor_SDK["Vendor SDK / Platform Support Libraries"]
@@ -33,9 +33,8 @@ flowchart TD
 ```text
 Repository
 │
-├── apps/        (Platform-independent application logic)
 ├── bsp/         (Target-agnostic C interface contracts)
-├── cmake/       (Shared build infrastructure & toolchains)
+├── libs/        (Shared RTOS components: ThreadX, NetX Duo, FileX, USBX)
 └── targets/     (Independent board support implementations)
        ├── STMicroelectronics/NUCLEO_F401RE/
        └── Microchip/POLARFIRE_ICICLE_RENODE/
@@ -47,9 +46,11 @@ Repository
 
 To maintain long-term framework maintainability and portability, the following root directories should generally remain **unchanged** when onboarding a new board:
 
-* `/apps`: Contains shared example applications and reusable demos (such as `threadx_demo`). Applications in this directory interact with hardware solely through the abstract headers in `<bsp/...>`. Developers may also add additional applications alongside the provided examples.
 * `/bsp`: Defines the target-agnostic C interface contracts (`board.h`, `led.h`, `console.h`). New board targets must implement these existing interfaces rather than modifying core interface definitions.
-* `/cmake`: Contains shared cross-compilation toolchain settings and build utility functions.
+* `/libs`: Shared RTOS components consumed by every target as submodules. Targets reference these rather than vendoring their own copy.
+
+> [!NOTE]
+> **Applications are currently target-resident.** Each target owns its demo under `targets/<Vendor>/<Board>/app/`, along with its own `cmake/` toolchain files and build helpers. A shared `/apps` layer is a goal of this framework, not something it provides yet: today's demos also include their target's `board_config.h` for memory sizing and vendor headers for board-specific startup self-tests. Onboard a new board by starting from the app in this template, not by linking one from a shared directory.
 
 > [!NOTE]
 > **Core Architectural Principle**:
@@ -74,7 +75,8 @@ The table below maps common embedded software components to their designated loc
 | **BSP Driver Implementation** | `targets/<Vendor>/<BOARD>/lib/bsp/src/` | Target developer (`bsp_board.c`, `bsp_led.c`, `bsp_console.c`) |
 | **Target Specification Constants** | `targets/<Vendor>/<BOARD>/lib/bsp/include/board_config.h` | Target developer (declarative defines only) |
 | **Target Build Automation** | `targets/<Vendor>/<BOARD>/scripts/build.ps1` | Target developer (PowerShell automation template) |
-| **Shared Application Code** | `/apps/<app_name>/` | Framework shared application layer (remains in root) |
+| **Application Code** | `targets/<Vendor>/<BOARD>/app/` | Target developer (start from this template's `app/main.c`) |
+| **Toolchain & Build Helpers** | `targets/<Vendor>/<BOARD>/cmake/` | Target developer (cross-compilation settings per target) |
 
 ---
 

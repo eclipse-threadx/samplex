@@ -11,20 +11,21 @@ cmake_minimum_required(VERSION 3.15)
 # TODO: Replace 'TARGET_BOARD_TEMPLATE' with your target board name (e.g. MY_CUSTOM_BOARD)
 project(TARGET_BOARD_TEMPLATE C CXX ASM)
 
-set(CMAKE_C_STANDARD 11)
+# AGENTS.md requires C99 compatibility.
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Define root paths
+# Define root paths. Only libs/ and bsp/ are shared; the toolchain file and any
+# CMake helper modules belong to this target, under cmake/.
 get_filename_component(WORKSPACE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
 set(SHARED_LIB_DIR "${WORKSPACE_ROOT}/libs")
-set(SHARED_APP_DIR "${WORKSPACE_ROOT}/apps")
 set(SHARED_BSP_DIR "${WORKSPACE_ROOT}/bsp")
-set(SHARED_CMAKE_DIR "${WORKSPACE_ROOT}/cmake")
 
-# Include GNU ARM Toolchain setup if building for bare-metal ARM Cortex-M
-if(EXISTS "${SHARED_CMAKE_DIR}/gcc-arm-none-eabi.cmake")
-    include("${SHARED_CMAKE_DIR}/gcc-arm-none-eabi.cmake")
-endif()
+# TODO: Add this target's cmake/ directory and select its toolchain file, e.g.
+#   if(NOT CMAKE_TOOLCHAIN_FILE)
+#       set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/cmake/<arch>-toolchain.cmake")
+#   endif()
+#   list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # Global compiler flags
 add_compile_options(
