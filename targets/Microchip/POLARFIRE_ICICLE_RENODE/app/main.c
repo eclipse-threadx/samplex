@@ -55,7 +55,12 @@ volatile char g_last_rx_char = 0;
 volatile uint32_t g_rx_irq_count = 0;
 volatile uint32_t g_rx_flag_errors = 0;
 
-void console_rx_isr_callback(char c) {
+/* Registered with bsp_console_set_rx_handler() in main(), and invoked from the
+ * MMUART1 trap path. The BSP no longer requires this application to define a
+ * fixed symbol, so an application that ignores console input links unchanged. */
+static void console_rx_handler(char c, void *context) {
+    (void)context;
+
     g_last_rx_char = c;
     g_rx_irq_count++;
     if (tx_event_flags_set(&alarm_flags, EVENT_FLAG_UART_RX, TX_OR) != TX_SUCCESS) {
@@ -115,6 +120,11 @@ static void run_startup_self_tests(void) {
 int main(void) {
     /* Initialize Board Peripherals & MMUART1 */
     bsp_board_init();
+
+    /* Attach the console receiver before any byte can arrive. Bytes that
+     * arrive with no handler attached are dropped rather than lost to a link
+     * error, which is what lets the shared demo link the same BSP. */
+    bsp_console_set_rx_handler(console_rx_handler, NULL);
 
     console_print("\n====================================================\n");
     console_print("Microchip PolarFire SoC Icicle Kit (Renode Target)\n");

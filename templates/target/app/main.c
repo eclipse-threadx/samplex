@@ -22,8 +22,11 @@
  * byte pool, which <bsp/memory.h> answers, and running the board's startup
  * self-tests, which <bsp/selftest.h> answers.
  *
- * Once the board boots this, grow the demo in place. Applications live with
- * their target rather than in a shared directory.
+ * Once the board boots this, either grow the demo in place - which is what a
+ * board-specific application such as the PolarFire LM75 monitor does - or
+ * point app/CMakeLists.txt at apps/threadx_demo/main.c and get the shared
+ * portable demo instead. What a demo names decides where it belongs: name a
+ * board symbol and it stays here, name none and it belongs in apps/.
  */
 
 #include "tx_api.h"

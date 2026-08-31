@@ -1,6 +1,13 @@
 # Microchip PolarFire SoC Icicle Kit Target Integration (Renode 64-Bit RISC-V)
 
-This directory contains the target Board Support Package (BSP) and condition-monitoring demonstration application for the **Microchip PolarFire SoC Icicle Kit** running in the **Renode** emulation environment.
+This directory contains the target Board Support Package (BSP) for the **Microchip PolarFire SoC Icicle Kit** running in the **Renode** emulation environment, and it builds **two executables** against that one BSP:
+
+| Executable | Application source | Why it lives there |
+|---|---|---|
+| `polarfire_icicle_demo.elf` | `app/main.c` | The board's own LM75 condition-monitoring demo. It models a sensor and drives the MMUART1 receive interrupt, so it is board specific and stays with the board. |
+| `polarfire_threadx_demo.elf` | `apps/threadx_demo/main.c` | The shared portable demo, byte for byte the same source `targets/STMicroelectronics/NUCLEO_F401RE` builds for 32-bit Cortex-M4. Building it here is what makes the framework's portability claim something CI verifies on a second architecture rather than something the documentation asserts. |
+
+Both are exercised by their own headless Renode suite, and CI runs both.
 
 ---
 
@@ -13,7 +20,7 @@ This directory contains the target Board Support Package (BSP) and condition-mon
 * **System DRAM**: 1 GiB LPDDR4 Memory (`0x80000000` – `0xC0000000`)
 * **Machine Timer**: SiFive CLINT `mtime` running at 1 MHz (`0x02000000`, 10ms tick = 10,000 cycles)
 * **Serial Debug Console**: Microchip MMUART1 (`0x20100000`) at 115200 baud (8-N-1)
-* **Telemetry**: Simulated LM75 temperature data processed via ThreadX queues and event flags
+* **Telemetry**: Simulated LM75 temperature data processed via ThreadX queues and event flags (LM75 demo only)
 
 ---
 
@@ -38,34 +45,57 @@ bash targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/build.sh --rebuild
 ## 3. Renode Execution & Verification
 
 ### Interactive Simulation (GUI / Terminal Analyzers):
-Inside the Renode monitor:
+Inside the Renode monitor, pick the executable to watch free-run:
 ```renode
 include @targets/Microchip/POLARFIRE_ICICLE_RENODE/renode/polarfire_demo.resc
+include @targets/Microchip/POLARFIRE_ICICLE_RENODE/renode/polarfire_threadx_demo.resc
 ```
-This free-runs the machine so the telemetry stream can be watched live.
 
 ### Automated Headless Test Runner:
+One runner drives both suites; `--app` selects which executable to verify.
 ```bash
-python targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py
+python targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py --app lm75          # default
+python targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py --app threadx_demo
 ```
-The runner drives `renode/polarfire_ci.resc`, which steps through fixed
-virtual-time intervals rather than free-running, injects a byte into MMUART1 to
-exercise the PLIC external-interrupt path, and quits on its own. It asserts on
-four things and exits non-zero if any of them is missing:
+Both step through fixed virtual-time intervals rather than free-running and
+quit on their own, and both exit non-zero if any assertion is missing. They
+share every line of Renode process handling, which is the reason they are one
+script: the plumbing is what would drift if it were copied.
+
+**`--app lm75`** drives `renode/polarfire_ci.resc`, which also injects a byte
+into MMUART1 to exercise the PLIC external-interrupt path:
 
 | Assertion | Covers |
 |---|---|
 | Startup self-tests all passed | `_sbrk()` bounds against the heap reservation, the `bsp_ram_region()` invariant, timer catch-up, PLIC configuration |
 | ThreadX system tick advancing | CLINT machine timer and `_tx_timer_interrupt` |
 | LM75 overtemperature alarm | Queue, event flags, and the analyzer thread |
-| PLIC IRQ 91 RX interrupt delivered | MMUART1 -> PLIC -> Hart 1 machine-mode trap path |
+| PLIC IRQ 91 RX interrupt delivered | MMUART1 -> PLIC -> Hart 1 machine-mode trap path, and the handler registered through `bsp_console_set_rx_handler()` |
 
 The last of these is the only check that proves the PLIC is programmed for the
 right context. Reading the controller's registers back cannot: the machine-mode
 context (1) and the supervisor-mode context (2) for Hart 1 both accept the
 writes and read back identically, but only the former ever raises `MEIP`.
 
-### Expected Output Stream (`mmuart1` @ 115200 baud):
+**`--app threadx_demo`** drives `renode/polarfire_threadx_demo_ci.resc`. Its
+four assertions are deliberately the same ones
+`targets/STMicroelectronics/NUCLEO_F401RE/scripts/test_renode.py` makes, so the
+two runs compare one source file built for two architectures:
+
+| Assertion | Covers |
+|---|---|
+| Boot banner reached the console | `bsp_console_write()` through `printf()`, and a banner that names no board |
+| Startup self-tests all passed | The same BSP checks as above, reached through the portable `<bsp/selftest.h>` callback |
+| LED blink thread and application timer ran | `bsp_led_toggle()` and the ThreadX application timer |
+| Mutex, queue, event flag and semaphore all exercised | The RTOS primitives, sized out of the pool `bsp_ram_region()` reports |
+
+The shared demo prints through `printf()` where the LM75 demo calls
+`bsp_console_write()` directly, so it is the first executable on this board to
+pull in newlib stdio. Measured heap use is **2944 bytes** of the 64 KB
+`BSP_HEAP_RESERVE_BYTES`, and the whole run completes with the reservation
+temporarily cut to 4 KB, so the reservation holds with room to spare.
+
+### Expected Output Stream, `--app lm75` (`mmuart1` @ 115200 baud):
 ```text
 ====================================================
 Microchip PolarFire SoC Icicle Kit (Renode Target)
@@ -86,3 +116,35 @@ Microchip PolarFire SoC Icicle Kit (Renode Target)
 [Monitor] Ticks: 200 | Active Runs: Sampler=5, Analyzer=5, Reporter=3
 [LM75 Sensor] Temperature: OVERTEMP ALARM TRIGGERED (>45.0C)
 ```
+
+### Expected Output Stream, `--app threadx_demo`:
+```text
+==========================================
+Eclipse ThreadX Device Monitor Demo
+==========================================
+
+System Status:
+------------------------------------------
+Uptime:           4 s
+Byte Pool Size:   1073585120 bytes
+Allocated Memory: 18896 bytes
+Free Memory:      1073566224 bytes
+------------------------------------------
+
+Thread Name      Priority State      Run Count    Stack Peak (Max / Size)
+----------------------------------------------------------------------------
+monitor thread   9        READY      41            536 / 2048 bytes (26%)
+reporter thread  10       READY      2            1048 / 2048 bytes (51%)
+blink thread     11       READY      8             536 / 2048 bytes (26%)
+...
+----------------------------------------------------------------------------
+Runs: Monitor: 41 | Reporter: 3 | Blink: 8 | Timer Wakes: 4
+RTOS Showcase: Mutex Locks: 40/40 | Queue Msgs: 20 | Event Wakes: 8 | Sema Wakes: 8
+```
+
+Thread stacks are 2048 bytes here and 1024 on the NUCLEO-F401RE from the one
+`THREAD_STACK_SIZE` expression, which is written in machine words rather than
+bytes: every saved register and spilled pointer doubles in width on a 64-bit
+hart, as does the newlib `printf()` call chain. The byte pool spans the whole
+region `bsp_ram_region()` reports, which on this board is the DRAM above the
+heap reservation - roughly 1 GiB.

@@ -70,6 +70,7 @@ unsigned bsp_self_test(bsp_selftest_report_fn report, void *context)
     void   *p_under;
     void   *p_over;
     void   *p_past_heap;
+    ptrdiff_t heap_taken;
     uint64_t now;
     uint64_t missed_cmp;
     uint64_t pending_cmp;
@@ -93,9 +94,17 @@ unsigned bsp_self_test(bsp_selftest_report_fn report, void *context)
     check(&state, (p1 != (void *)-1) && ((uintptr_t)p1 >= BSP_HEAP_BASE),
           "_sbrk() valid allocation returned base pointer");
 
-    /* 2. _sbrk() underflow test (shrink below the heap base). */
+    /* 2. _sbrk() underflow test (shrink below the heap base).
+     *
+     * The decrement is derived from the live break rather than fixed. An
+     * application that reached printf() before this point already carries a
+     * newlib stdio buffer on the heap, so a fixed -128 would be an ordinary
+     * shrink rather than an underflow, and this check would pass or fail on
+     * which application happened to link the BSP. Handing back one byte more
+     * than has ever been taken underflows no matter what ran first. */
     errno = 0;
-    p_under = _sbrk(-128);
+    heap_taken = (ptrdiff_t)((uintptr_t)_sbrk(0) - BSP_HEAP_BASE);
+    p_under = _sbrk(-(heap_taken + 1));
     check(&state, (p_under == (void *)-1) && (errno == EINVAL),
           "_sbrk() underflow guard rejected with EINVAL");
 
