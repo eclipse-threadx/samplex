@@ -23,6 +23,7 @@
 ** @attention
 **
 ** Copyright (c) 2022 STMicroelectronics.
+** Copyright (c) 2026 Eclipse ThreadX contributors
 ** All rights reserved.
 **
 ** This software is licensed under terms that can be found in the LICENSE file
@@ -171,6 +172,8 @@ SECTIONS
     PROVIDE ( end = . );
     PROVIDE ( _end = . );
     . = . + _Min_Heap_Size;
+    /* Upper bound enforced by _sbrk() in lib/bsp/src/newlib_stubs.c. */
+    PROVIDE ( _heap_limit = . );
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
     /* ThreadX: first free RAM after reserved heap/stack (tx_initialize_low_level.S). */

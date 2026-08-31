@@ -34,7 +34,7 @@ arm-none-eabi-objdump --version
 ```
 
 ### CMake-Based Build
-From the `STMicroelectronics/NUCLEO_F401RE` directory:
+From the `targets/STMicroelectronics/NUCLEO_F401RE` directory:
 
 ```bash
 cmake -Bbuild -GNinja -DCMAKE_TOOLCHAIN_FILE=cmake/arm-gcc-cortex-m4.cmake .
@@ -120,17 +120,19 @@ The BSP separates the ThreadX scheduler tick from the STM32 HAL timebase to avoi
 
 ThreadX requires exclusive ownership of the SysTick exception for scheduler operation. To avoid conflicts, the STM32 HAL timebase is implemented using TIM2 instead of the default SysTick source.
 
-The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and provides custom implementations of `HAL_SuspendTick()` and `HAL_ResumeTick()` in `board_init.c`. These functions enable and disable the TIM2 update interrupt without affecting the ThreadX scheduler tick.
+The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and provides custom implementations of `HAL_SuspendTick()` and `HAL_ResumeTick()` in `lib/bsp/src/bsp_board.c`. These functions enable and disable the TIM2 update interrupt without affecting the ThreadX scheduler tick.
 
 
 ## File Organization
 
 - **`app/`**: Main application logic and boot setups
-  - **`app/common/`**: Console serial driver and board configurations
+  - **`app/common/`**: Vendor HAL MSP hooks and boot sources
   - **`app/common/startup/`**: Linker scripts and assembly boot startup code
   - **`app/starter/`**: Demo main thread logic
 - **`lib/`**: Libraries and dependencies
-  - **`lib/nucleo_bsp/`**: Board specific support libraries (LD2 LED)
+  - **`lib/bsp/`**: Board support implementing the generic `<bsp/*.h>` interfaces
+    (`bsp_board.c` clocks and HAL timebase, `bsp_led.c` LD2, `bsp_console.c`
+    USART2, `newlib_stubs.c` newlib syscall overrides)
   - **`lib/stm32cubef4/`**: HAL Driver wrapper and platform drivers
   - **`lib/threadx/`**: ThreadX user configuration file (`tx_user.h`)
 - **`cmake/`**: Cross-compilation module definitions
@@ -140,9 +142,9 @@ The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and pro
 ## Validation Record
 
 ### Verification Environment
-- **Toolchain**: Arm GNU Toolchain 15.2.Rel1 (GCC 15.2.1)
-- **Static ROM usage**: 18244 Bytes (3.48% of 512 KB Flash)
-- **Static RAM usage**: 5632 Bytes (5.73% of 96 KB RAM)
+- **Toolchain**: Arm GNU Toolchain 14.2.Rel1 (GCC 14.2.1), the version pinned by CI
+- **Static ROM usage**: 20120 Bytes (3.84% of 512 KB Flash)
+- **Static RAM usage**: 6000 Bytes (6.10% of 96 KB RAM)
 - **Dynamic Stack & Buffer allocation**: Stacks (8 x 1024 bytes) and Queue buffer (40 bytes) are dynamically allocated from the `TX_BYTE_POOL` (consuming 8312 bytes total, including pool headers).
 - **Board Hardware**: NUCLEO-F401RE
 

@@ -6,14 +6,8 @@
 # 
 #  SPDX-License-Identifier: MIT
 
-if(NOT APP_CONFIG)
-    set(APP_CONFIG "starter")
-endif()
-
-message(STATUS "Building application with configuration: ${APP_CONFIG}")
-
 set(COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/common)
-set(CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${APP_CONFIG})
+set(STARTER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/starter)
 
 set(SOURCES
     ${COMMON_DIR}/startup/system_stm32f4xx.c
@@ -22,11 +16,11 @@ set(SOURCES
 
     ${COMMON_DIR}/stm32cubef4/stm32f4xx_hal_msp.c
 
-    ${COMMON_DIR}/board_init.c
-    ${COMMON_DIR}/console.c
-    ${COMMON_DIR}/newlib_syscalls.c
-
-    ${CONFIG_DIR}/main.c
+    # Newlib syscall overrides. Compiled into the executable rather than into
+    # libnucleo_bsp.a so the linker always takes these definitions instead of
+    # falling back to the libnosys stubs.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/bsp/src/newlib_stubs.c
+    ${STARTER_DIR}/main.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -41,7 +35,7 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${COMMON_DIR}
-        ${CONFIG_DIR}
+        ${STARTER_DIR}
 )
 
 # Linker script

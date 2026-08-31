@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 param(
-    [string]$Config = "starter",
     [switch]$Clean,
     [switch]$Rebuild
 )
@@ -17,7 +16,6 @@ Write-Host "Nucleo F401RE - Build Script (PowerShell)"
 Write-Host "=========================================="
 Write-Host "Board Dir: $BOARD_DIR"
 Write-Host "Build Dir: $BUILD_DIR"
-Write-Host "Config: $Config"
 Write-Host ""
 
 # Check for ARM GCC compiler
@@ -49,7 +47,6 @@ if (!(Test-Path "CMakeCache.txt") -or !(Test-Path "build.ninja") -or $Rebuild) {
     Write-Host "[INFO] Configuring CMake..."
     cmake -G Ninja `
         "-DCMAKE_BUILD_TYPE=Release" `
-        "-DAPP_CONFIG=$Config" `
         "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" `
         $BOARD_DIR
     if ($LASTEXITCODE -ne 0) {

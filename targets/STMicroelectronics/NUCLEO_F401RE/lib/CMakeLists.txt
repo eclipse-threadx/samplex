@@ -18,4 +18,5 @@ add_subdirectory(${SHARED_LIB_DIR}/threadx threadx)
 
 # STM32 platform libraries
 add_subdirectory(stm32cubef4)
-add_subdirectory(nucleo_bsp)
+add_subdirectory(bsp)
+

@@ -11,10 +11,10 @@
 #include <stdio.h>
 
 #include "tx_api.h"
-
-#include "board_init.h"
+#include "bsp/board.h"
+#include "bsp/led.h"
+#include "bsp/console.h"
 #include "cloud_config.h"
-#include "nucleo_bsp.h"
 
 #define THREAD_STACK_SIZE 1024
 
@@ -237,7 +237,7 @@ static void blink_thread_entry(ULONG parameter) {
   (void)parameter;
 
   while (1) {
-    nucleo_led_toggle();
+    bsp_led_toggle();
     blink_counter++;
     /* Toggle Event Flag bit 0 when LED toggles */
     tx_event_flags_set(&event_flags, 0x01, TX_OR);
@@ -541,7 +541,7 @@ void tx_application_define(void *first_unused_memory) {
 }
 
 int main(void) {
-  board_init();
+  bsp_board_init();
 
   /* Start the ThreadX kernel */
   tx_kernel_enter();

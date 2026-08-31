@@ -101,3 +101,41 @@ jobs:
       - name: Run Deterministic Headless Renode Test
         run: |
           python3 targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py
+
+  build-arm-nucleo:
+    name: Build ST Nucleo-F401RE (ARM Cortex-M4)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install CMake and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Install Pinned Arm GNU Toolchain 14.2.Rel1
+        run: |
+          wget -q https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
+          mkdir -p $HOME/arm-gcc
+          tar -xJf arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz -C $HOME/arm-gcc --strip-components=1
+          rm arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
+          echo "$HOME/arm-gcc/bin" >> $GITHUB_PATH
+
+      - name: Build NUCLEO-F401RE Demo
+        run: |
+          bash targets/STMicroelectronics/NUCLEO_F401RE/scripts/build.sh --rebuild
+
+      - name: Verify NUCLEO-F401RE Demo ELF
+        run: |
+          test -f targets/STMicroelectronics/NUCLEO_F401RE/build/app/nucleo_f401re.elf
+          echo "[OK] NUCLEO-F401RE demo ELF verified."
+
+      - name: Archive Built NUCLEO-F401RE ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: nucleo-f401re-demo-elf
+          path: targets/STMicroelectronics/NUCLEO_F401RE/build/app/nucleo_f401re.elf
+          retention-days: 1

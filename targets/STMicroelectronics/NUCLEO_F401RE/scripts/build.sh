@@ -7,7 +7,6 @@
 # Fail on error
 set -e
 
-CONFIG="starter"
 CLEAN=false
 REBUILD=false
 
@@ -23,16 +22,11 @@ echo "Nucleo F401RE - Build Script (Bash)"
 echo "=========================================="
 echo "Board Dir: $BOARD_DIR"
 echo "Build Dir: $BUILD_DIR"
-echo "Config:    $CONFIG"
 echo ""
 
 # Parse options
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -c|--config)
-            CONFIG="$2"
-            shift 2
-            ;;
         --clean)
             CLEAN=true
             shift
@@ -43,7 +37,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--config CONFIG] [--clean] [--rebuild]"
+            echo "Usage: $0 [--clean] [--rebuild]"
             exit 1
             ;;
     esac
@@ -101,13 +95,11 @@ if [ ! -f "CMakeCache.txt" ] || [ ! -f "build.ninja" ] || [ "$REBUILD" = true ];
     if command -v ninja &>/dev/null; then
         cmake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DAPP_CONFIG="$CONFIG" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             "$BOARD_DIR"
     else
         cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DAPP_CONFIG="$CONFIG" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             "$BOARD_DIR"
     fi
