@@ -55,7 +55,7 @@ four things and exits non-zero if any of them is missing:
 
 | Assertion | Covers |
 |---|---|
-| Startup self-tests all passed | `_sbrk()` bounds, timer catch-up, PLIC configuration |
+| Startup self-tests all passed | `_sbrk()` bounds against the heap reservation, the `bsp_ram_region()` invariant, timer catch-up, PLIC configuration |
 | ThreadX system tick advancing | CLINT machine timer and `_tx_timer_interrupt` |
 | LM75 overtemperature alarm | Queue, event flags, and the analyzer thread |
 | PLIC IRQ 91 RX interrupt delivered | MMUART1 -> PLIC -> Hart 1 machine-mode trap path |

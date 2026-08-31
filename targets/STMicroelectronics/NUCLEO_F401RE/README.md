@@ -80,8 +80,11 @@ ground for use with `renode-test`.
 
 ### What is asserted
 
-The demo runs seven startup self-tests before `tx_kernel_enter()` and prints a
-`[SELF-TEST]` summary the harness asserts on:
+The board runs eight startup self-tests before `tx_kernel_enter()` and the demo
+prints a `[SELF-TEST]` summary the harness asserts on. The checks live in
+`lib/bsp/src/bsp_selftest.c` behind `<bsp/selftest.h>`, because they test the
+BSP - its linker reservations, its clock tree, its HAL timebase - rather than
+the application. `main.c` supplies only the reporting callback:
 
 | # | Self-test | Guards against |
 |---|-----------|----------------|
@@ -92,6 +95,7 @@ The demo runs seven startup self-tests before `tx_kernel_enter()` and prints a
 | 5 | Heap reservation ends at or below the ThreadX byte pool | linker script layout regression |
 | 6 | `SystemCoreClock` is 84 MHz | a silently wrong PLL configuration |
 | 7 | HAL timebase (TIM2) tick advancing | `HAL_InitTick()` re-entry leaving TIM2 stopped |
+| 8 | `bsp_ram_region()` stays clear of the heap and inside SRAM | a bad stack reservation handing the byte pool memory it does not own |
 
 Test 4 is the regression guard for the heap bound. Requesting 32 KB fits inside
 the 96 KB SRAM but far exceeds the heap reservation, so bounding `_sbrk()`
@@ -197,7 +201,7 @@ The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and pro
 
 ### Verification Environment
 - **Toolchain**: Arm GNU Toolchain 14.3.Rel1 (GCC 14.3.1), the version pinned by CI and by the ThreadX Cortex-M ports
-- **Static ROM usage**: 22064 Bytes (4.21% of 512 KB Flash), including the startup self-tests
+- **Static ROM usage**: 22272 Bytes (4.25% of 512 KB Flash), including the startup self-tests
 - **Static RAM usage**: 6000 Bytes (6.10% of 96 KB RAM)
 - **Dynamic Stack & Buffer allocation**: Stacks (8 x 1024 bytes) and Queue buffer (40 bytes) are dynamically allocated from the `TX_BYTE_POOL` (consuming 8312 bytes total, including pool headers).
 - **Board Hardware**: NUCLEO-F401RE

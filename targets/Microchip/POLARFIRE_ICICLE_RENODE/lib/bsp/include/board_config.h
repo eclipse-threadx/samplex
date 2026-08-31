@@ -13,6 +13,8 @@
 #ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 
+#include <stdint.h>
+
 /* CPU Subsystem Frequencies */
 #define BSP_CPU_CLOCK_HZ        600000000ULL /* 600 MHz U54 Application Core Clock */
 #define BSP_SYSTEM_CLOCK_HZ     BSP_CPU_CLOCK_HZ
@@ -24,6 +26,23 @@
 
 #define BSP_UART_BAUDRATE       115200
 #define BSP_RAM_END             0xC0000000ULL /* 1 GiB LPDDR4 DRAM End Address */
+
+/* First byte of DRAM above the 16 KB boot stack, placed by linker.ld.
+ * MISRA C:2012 Rule 8.6 deviation: defined by the linker script rather than by
+ * any translation unit, which is the only way to import a link-time address. */
+extern char __end;
+
+/* Bytes of DRAM reserved for the newlib heap immediately above __end.
+ *
+ * _sbrk() bounds itself against BSP_HEAP_LIMIT and bsp_ram_region() hands the
+ * application only the DRAM above it, so malloc() and a ThreadX byte pool
+ * placed at the first unused address cannot overlap. Bounding _sbrk() against
+ * BSP_RAM_END instead would let one oversized malloc() take memory the
+ * application already owns - the failure NUCLEO-F401RE shipped with before its
+ * heap was bounded against the linker reservation. */
+#define BSP_HEAP_RESERVE_BYTES  0x10000ULL /* 64 KB */
+#define BSP_HEAP_BASE           ((uintptr_t)&__end)
+#define BSP_HEAP_LIMIT          (BSP_HEAP_BASE + (uintptr_t)BSP_HEAP_RESERVE_BYTES)
 
 #define BSP_HAS_LED             1
 #define BSP_HAS_CONSOLE         1

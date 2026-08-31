@@ -46,11 +46,11 @@ Repository
 
 To maintain long-term framework maintainability and portability, the following root directories should generally remain **unchanged** when onboarding a new board:
 
-* `/bsp`: Defines the target-agnostic C interface contracts (`board.h`, `led.h`, `console.h`). New board targets must implement these existing interfaces rather than modifying core interface definitions.
+* `/bsp`: Defines the target-agnostic C interface contracts (`board.h`, `led.h`, `console.h`, `memory.h`, `selftest.h`). New board targets must implement these existing interfaces rather than modifying core interface definitions.
 * `/libs`: Shared RTOS components consumed by every target as submodules. Targets reference these rather than vendoring their own copy.
 
 > [!NOTE]
-> **Applications are currently target-resident.** Each target owns its demo under `targets/<Vendor>/<Board>/app/`, along with its own `cmake/` toolchain files and build helpers. A shared `/apps` layer is a goal of this framework, not something it provides yet: today's demos also include their target's `board_config.h` for memory sizing and vendor headers for board-specific startup self-tests. Onboard a new board by starting from the app in this template, not by linking one from a shared directory.
+> **Applications are currently target-resident.** Each target owns its demo under `targets/<Vendor>/<Board>/app/`, along with its own `cmake/` toolchain files and build helpers. A shared `/apps` layer is a goal of this framework, not something it provides yet, so onboard a new board by starting from the app in this template rather than by linking one from a shared directory. What a demo no longer needs is board headers: `<bsp/memory.h>` covers byte-pool sizing and `<bsp/selftest.h>` covers startup self-tests, so both shipped demos include only `<tx_api.h>` and `<bsp/...>`.
 
 > [!NOTE]
 > **Core Architectural Principle**:
@@ -72,7 +72,7 @@ The table below maps common embedded software components to their designated loc
 | **Startup Assembly & System Code** | `targets/<Vendor>/<BOARD>/app/common/startup/` | Vendor SDK (`startup_<mcu>.s`, `system_<mcu>.c`) |
 | **Linker Script** | `targets/<Vendor>/<BOARD>/app/common/linker/` | Vendor SDK (`<mcu>.ld` or compiler script) |
 | **ThreadX Low-Level Setup** | `targets/<Vendor>/<BOARD>/app/common/startup/` | `libs/threadx/ports/<arch>/<compiler>/src/` |
-| **BSP Driver Implementation** | `targets/<Vendor>/<BOARD>/lib/bsp/src/` | Target developer (`bsp_board.c`, `bsp_led.c`, `bsp_console.c`) |
+| **BSP Driver Implementation** | `targets/<Vendor>/<BOARD>/lib/bsp/src/` | Target developer (`bsp_board.c`, `bsp_led.c`, `bsp_console.c`, `bsp_memory.c`, `bsp_selftest.c`) |
 | **Target Specification Constants** | `targets/<Vendor>/<BOARD>/lib/bsp/include/board_config.h` | Target developer (declarative defines only) |
 | **Target Build Automation** | `targets/<Vendor>/<BOARD>/scripts/build.ps1` | Target developer (PowerShell automation template) |
 | **Application Code** | `targets/<Vendor>/<BOARD>/app/` | Target developer (start from this template's `app/main.c`) |
@@ -95,12 +95,15 @@ To add support for a new board (e.g. `MY_VENDOR / MY_BOARD`):
    - Set `BSP_SYSTEM_CLOCK_HZ` to your core CPU frequency.
    - Set `BSP_UART_BAUDRATE` to your debug serial speed.
    - Set `BSP_RAM_END` to the physical top address of your MCU SRAM.
+   - Set `BSP_MAIN_STACK_RESERVE` to the bytes your board holds back at the top of RAM for the main stack, so `bsp_ram_region()` keeps an application's byte pool clear of it.
 
 3. **Implement Abstract C BSP Drivers**:
    Populate the driver stubs in `targets/MyVendor/MY_BOARD/lib/bsp/src/`:
    - `bsp_board.c`: Configure System Clocks, Flash Wait States, and low-level timers in `bsp_board_init()`.
    - `bsp_led.c`: Configure GPIO pin muxing and implement `bsp_led_on()`, `bsp_led_off()`, `bsp_led_toggle()`.
    - `bsp_console.c`: Configure UART peripheral and implement `bsp_console_write()`.
+   - `bsp_memory.c`: Report the RAM the application may claim in `bsp_ram_region()`, subtracting whatever this board reserves for its C heap and stacks.
+   - `bsp_selftest.c`: Verify in `bsp_self_test()` that the board came up as configured - clocks, timebase, interrupt routing, and that the C heap cannot grow into the region `bsp_ram_region()` hands out.
 
 4. **Add Startup Files & Linker Script**:
    Obtain the standard startup assembly (`startup_<mcu>.s`), system initialization (`system_<mcu>.c`), and linker script (`<mcu>.ld`) **directly from your MCU vendor's official SDK or reference package** (do not write these from scratch). Developers should avoid modifying vendor startup code unless strictly necessary, as these files are maintained by the silicon vendor. Place them under `targets/MyVendor/MY_BOARD/app/common/startup/` and `targets/MyVendor/MY_BOARD/app/common/linker/`.
@@ -133,12 +136,14 @@ The current framework defines the following core baseline C interfaces in `/bsp/
 | `<bsp/board.h>` | `bsp_board_init()` | Core MCU clock tree, power scaling, and flash wait state setup. |
 | `<bsp/led.h>` | `bsp_led_init()`, `bsp_led_toggle()`, etc. | GPIO user LED initialization and state toggling. |
 | `<bsp/console.h>` | `bsp_console_init()`, `bsp_console_write()` | Serial UART initialization and output transmission. |
+| `<bsp/memory.h>` | `bsp_ram_region()` | RAM the application may claim, clamped against the board's own heap and stack reservations. |
+| `<bsp/selftest.h>` | `bsp_self_test()` | Board startup verification, reported through an application-supplied callback. |
 
 ### Target Configuration Component (`board_config.h`)
 
 | Configuration File | Expected Constants | Description |
 | :--- | :--- | :--- |
-| `board_config.h` | `BSP_RAM_END`, `BSP_SYSTEM_CLOCK_HZ`, `BSP_UART_BAUDRATE` | Compile-time hardware specification constants consumed by the BSP driver implementation layer. |
+| `board_config.h` | `BSP_RAM_END`, `BSP_MAIN_STACK_RESERVE`, `BSP_SYSTEM_CLOCK_HZ`, `BSP_UART_BAUDRATE` | Compile-time hardware specification constants consumed by the BSP driver implementation layer. |
 
 > [!TIP]
 > **Optional Interfaces & Hardware Variants**:

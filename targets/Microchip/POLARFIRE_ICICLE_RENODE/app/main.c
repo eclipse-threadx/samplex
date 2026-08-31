@@ -14,23 +14,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <errno.h>
 #include "tx_api.h"
-#include "hwtimer.h"
-#include "plic.h"
-#include "csr.h"
 #include "bsp/board.h"
 #include "bsp/console.h"
 #include "bsp/led.h"
-
-extern void *_sbrk(ptrdiff_t incr);
-
-/* board_config.h derives TICK_CYCLES from BSP_TICK_RATE_HZ without seeing the
- * ThreadX headers. This translation unit sees both, so it is where the two are
- * checked against each other. C99 has no _Static_assert, hence the negative
- * array size idiom. */
-typedef char bsp_tick_rate_matches_threadx[
-    (BSP_TICK_RATE_HZ == (unsigned long long)TX_TIMER_TICKS_PER_SECOND) ? 1 : -1];
+#include "bsp/selftest.h"
 
 #define DEMO_STACK_SIZE     4096
 #define DEMO_QUEUE_ITEMS    10
@@ -90,13 +78,16 @@ static volatile ULONG s_sampler_runs = 0;
 static volatile ULONG s_analyzer_runs = 0;
 static volatile ULONG s_reporter_runs = 0;
 
-static unsigned s_selftest_failures = 0;
+/* The startup checks themselves belong to the board and live in its BSP; this
+ * side only decides how their results are printed. scripts/test_renode.py
+ * asserts on the summary line. */
 
-static void selftest_report(int passed, const char *message) {
+static void selftest_report(int passed, const char *message, void *context) {
+    (void)context;
+
     if (passed) {
         console_print("[+] PASS: ");
     } else {
-        s_selftest_failures++;
         console_print("[-] FAIL: ");
     }
     console_print(message);
@@ -104,71 +95,20 @@ static void selftest_report(int passed, const char *message) {
 }
 
 static void run_startup_self_tests(void) {
-    extern char __end;
-    char num_buf[160];
-    console_print("[SELF-TEST] Starting Hardware & Runtime Verification...\n");
+    char msg[96];
+    unsigned failures;
 
-    /* 1. _sbrk() Valid allocation test */
-    void *p1 = _sbrk(64);
-    selftest_report(p1 != (void *)-1 && (uintptr_t)p1 >= (uintptr_t)&__end,
-                    "_sbrk() valid allocation returned base pointer");
+    console_print("[SELF-TEST] Starting BSP & Runtime Verification...\n");
 
-    /* 2. _sbrk() Underflow test (shrink below heap base) */
-    errno = 0;
-    void *p_under = _sbrk(-128);
-    selftest_report(p_under == (void *)-1 && errno == EINVAL,
-                    "_sbrk() underflow guard rejected with EINVAL");
+    failures = bsp_self_test(selftest_report, NULL);
 
-    /* 3. _sbrk() Overflow test (request beyond 1 GiB DRAM) */
-    errno = 0;
-    void *p_over = _sbrk((ptrdiff_t)0x40000000ULL);
-    selftest_report(p_over == (void *)-1 && errno == ENOMEM,
-                    "_sbrk() overflow guard rejected with ENOMEM");
-
-    /* 4. HWTimer catch-up clamp.
-     *
-     * Exercised as pure arithmetic through hwtimer_next_cmp(), so no CLINT
-     * register is disturbed: mtime is the platform-wide counter shared by every
-     * hart, and mtimecmp drives the live kernel tick. Both branches are covered
-     * - a deadline still in the future advances relatively, one already missed
-     * is rebased onto the current time instead of firing continuously. */
-    uint64_t now = 5000000ULL;
-    uint64_t missed_cmp = now - (TICK_CYCLES * 8ULL);   /* 8 ticks behind */
-    uint64_t pending_cmp = now - (TICK_CYCLES / 2ULL);  /* deadline not yet due */
-    int clamp_ok = (hwtimer_next_cmp(missed_cmp, now) == now + TICK_CYCLES) &&
-                   (hwtimer_next_cmp(pending_cmp, now) == pending_cmp + TICK_CYCLES);
-    snprintf(num_buf, sizeof(num_buf),
-             "HWTimer catch-up (missed deadline rebased to %llu, pending deadline advanced to %llu)",
-             (unsigned long long)hwtimer_next_cmp(missed_cmp, now),
-             (unsigned long long)hwtimer_next_cmp(pending_cmp, now));
-    selftest_report(clamp_ok, num_buf);
-
-    /* 5. PLIC Configuration & Addressing Verification.
-     * A wrong PLIC base would read back zeroes here, so the register values
-     * confirm the addressing as well as the configuration. */
-    uint32_t prio = PLIC_PRIORITY_REG(MMUART1_IRQ);
-    uint32_t en_bitmap = PLIC_HART1_M_ENABLE_REG(MMUART1_IRQ);
-    uint32_t thresh = PLIC_HART1_M_THRESHOLD_REG;
-    uint64_t mie_val;
-    __asm__ volatile("csrr %0, mie" : "=r"(mie_val));
-
-    int plic_ok = (prio == 1) &&
-                  ((en_bitmap & (1U << (MMUART1_IRQ % 32))) != 0) &&
-                  (thresh == 0) &&
-                  ((mie_val & MIE_MEIE) != 0);
-    snprintf(num_buf, sizeof(num_buf),
-             "PLIC Hart 1 (IRQ %u prio=%u en=0x%08X thresh=%u mie=0x%llX)",
-             (unsigned)MMUART1_IRQ, (unsigned)prio, (unsigned)en_bitmap,
-             (unsigned)thresh, (unsigned long long)mie_val);
-    selftest_report(plic_ok, num_buf);
-
-    if (s_selftest_failures == 0) {
+    if (failures == 0U) {
         console_print("[SELF-TEST] All startup verification tests PASSED!\n\n");
     } else {
-        snprintf(num_buf, sizeof(num_buf),
+        snprintf(msg, sizeof(msg),
                  "[SELF-TEST] %u startup verification test(s) FAILED!\n\n",
-                 s_selftest_failures);
-        console_print(num_buf);
+                 failures);
+        console_print(msg);
     }
 }
 
