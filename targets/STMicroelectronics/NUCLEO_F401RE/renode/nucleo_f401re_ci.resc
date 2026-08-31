@@ -1,0 +1,35 @@
+:name: NUCLEO-F401RE - ThreadX Demo (headless CI run)
+:description: Deterministic virtual-time run driven by scripts/test_renode.py.
+
+# Standalone counterpart to nucleo_f401re_demo.resc rather than an include of
+# it. Renode resolves $ORIGIN only in variable assignment, so an included script
+# cannot be located relative to the file including it, and the two run
+# differently anyway: the demo script free-runs for interactive use, while this
+# one advances a fixed span of virtual time so the run is reproducible and
+# terminates on its own instead of depending on wall clock.
+
+Clear
+
+using sysbus
+mach create "NUCLEO_F401RE"
+
+$platform?=$ORIGIN/nucleo_f401re.repl
+machine LoadPlatformDescription $platform
+
+# Under --plain --disable-gui this logs USART2 traffic to stdout, which is what
+# the assertions in test_renode.py read.
+showAnalyzer usart2
+
+$bin?=$ORIGIN/../build/app/nucleo_f401re.elf
+
+macro reset
+"""
+    sysbus LoadELF $bin
+"""
+runMacro $reset
+
+# Long enough for the startup self-tests, the 1 Hz application timer, and at
+# least two reporter-thread status blocks with non-zero RTOS counters.
+emulation RunFor "4"
+
+quit

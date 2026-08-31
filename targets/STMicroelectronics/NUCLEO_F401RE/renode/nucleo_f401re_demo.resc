@@ -1,0 +1,25 @@
+:name: NUCLEO-F401RE - ThreadX Device Monitor Demo
+:description: Eclipse ThreadX RTOS on ST NUCLEO-F401RE (Renode, ARM Cortex-M4)
+
+# Clear previous emulation state
+Clear
+
+using sysbus
+mach create "NUCLEO_F401RE"
+
+$platform?=$ORIGIN/nucleo_f401re.repl
+machine LoadPlatformDescription $platform
+
+# USART2 is the ST-LINK virtual COM port on this board and the demo console.
+showAnalyzer usart2
+
+# Portable relative path using Renode's built-in $ORIGIN variable
+$bin?=$ORIGIN/../build/app/nucleo_f401re.elf
+
+macro reset
+"""
+    sysbus LoadELF $bin
+"""
+runMacro $reset
+
+start
