@@ -18,7 +18,7 @@
 #include "board_config.h"
 #include "bsp/console.h"
 
-extern char __end; /* Symbol set by linker at end of BSS / top of boot stack */
+/* __end, BSP_HEAP_BASE and BSP_HEAP_LIMIT come from board_config.h. */
 static char *heap_ptr = NULL;
 
 static inline uintptr_t disable_interrupts(void) {
@@ -77,7 +77,10 @@ void *_sbrk(ptrdiff_t incr) {
     }
 
     if (incr > 0) {
-        if ((uintptr_t)heap_ptr + (uintptr_t)incr > (uintptr_t)BSP_RAM_END ||
+        /* Bound against the end of the heap reservation, not the end of DRAM:
+         * everything above BSP_HEAP_LIMIT is what bsp_ram_region() hands the
+         * application for its ThreadX pool. */
+        if ((uintptr_t)heap_ptr + (uintptr_t)incr > BSP_HEAP_LIMIT ||
             (uintptr_t)heap_ptr + (uintptr_t)incr < (uintptr_t)heap_ptr) {
             restore_interrupts(mstatus);
             errno = ENOMEM;

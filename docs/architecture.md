@@ -9,7 +9,7 @@ This document describes the architecture, design philosophy, directory structure
 The BSP framework is designed to be **additive and non-invasive**, allowing new boards to be integrated without modifying existing board implementations.
 
 1. **Legacy Isolation**: The board directories that predate this framework (`/MXChip`, `/OpenHW`, `/STMicroelectronics`) remain completely untouched, preserving their drivers, submodules, and build systems.
-2. **Hardware Access Through the BSP**: Application logic reaches LEDs and the console through the abstract interfaces in `/bsp`, not through vendor registers. Applications are target-resident: each target owns its demo under `app/`, and today's demos do additionally include their own `board_config.h` for memory sizing and vendor headers for board-specific startup self-tests. A fully portable shared application layer is a goal of the framework, not a property it has yet.
+2. **Hardware Access Through the BSP**: Application logic reaches LEDs, the console, the board's RAM budget and its startup self-tests through the abstract interfaces in `/bsp`, not through vendor registers. Both shipped demos now include only `<tx_api.h>` and `<bsp/...>` headers. Applications are still target-resident, though: each target owns its demo under `app/`, and there is no shared application directory to link one from. A fully portable shared application layer is a goal of the framework, not a property it has yet.
 3. **Independent Build Configuration**: Each target carries its own `cmake/` toolchain files and build helpers. Nothing in the build is shared between targets, so changing one board cannot break another.
 
 ---
@@ -29,7 +29,7 @@ samplex/ (repository root)
 │   └── STMicroelectronics/
 │       └── NUCLEO_F401RE/           # Board-specific BSP implementation & Renode target
 ├── bsp/                            # [Framework] Abstract BSP interface definitions
-│   └── include/bsp/                # board.h, led.h, console.h
+│   └── include/bsp/                # board.h, led.h, console.h, memory.h, selftest.h
 ├── docs/                           # [Framework] Architecture and onboarding documentation
 └── templates/                      # [Framework] Templates for onboarding new boards
 ```
@@ -55,6 +55,22 @@ Every board added to the framework under `/targets` must implement the abstract 
 
 * `void bsp_console_init(void)`: Initializes the default UART console.
 * `void bsp_console_write(const char *data, size_t length)`: Transmits a block of data over the console interface.
+
+### Application RAM Budget (`memory.h`)
+
+* `void bsp_ram_region(void *first_unused, void **base, size_t *size)`: Reports the RAM region the application may claim, given the pointer ThreadX passed to `tx_application_define()`.
+
+ThreadX reports the first address it believes to be unused, but only the board knows what sits above it - a C heap reservation, a main stack at the top of RAM, or a peripheral window. This interface is what lets an application size a `TX_BYTE_POOL` without naming a board symbol. A board must never include its own reservations in the region it returns; an application will allocate every byte of it.
+
+The two shipped targets show the two shapes this takes. The NUCLEO-F401RE keeps its main stack at the top of SRAM and clamps the region below a fixed reservation; the PolarFire SoC Icicle Kit keeps its boot stack *below* ThreadX's first unused address and only has to skip its C heap reservation.
+
+### Startup Self-Tests (`selftest.h`)
+
+* `unsigned bsp_self_test(bsp_selftest_report_fn report, void *context)`: Runs the board's startup self-tests, reporting each through the callback, and returns the number of failures.
+
+Checks that the board came up as its own configuration promised are BSP tests, not application tests: they need vendor headers, linker symbols and register maps that no portable application can see. Keeping them behind this interface is what removed those headers from both demos' `main.c`.
+
+The application supplies only the reporting callback, so message formatting - and therefore the choice between `printf()` and `bsp_console_write()` - stays on the application side. Both shipped targets verify that their C heap cannot grow into the region `bsp_ram_region()` promises the application; the NUCLEO-F401RE additionally checks its clock tree and HAL timebase, and the PolarFire its CLINT tick arithmetic and PLIC routing.
 
 ---
 

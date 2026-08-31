@@ -11,6 +11,8 @@ add_library(target_bsp STATIC
     src/bsp_board.c
     src/bsp_led.c
     src/bsp_console.c
+    src/bsp_memory.c
+    src/bsp_selftest.c
 )
 
 # Export BSP headers and shared abstract C BSP headers to PUBLIC include paths

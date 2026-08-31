@@ -18,12 +18,12 @@
  *
  * This file deliberately depends on nothing but <tx_api.h> and the generic BSP
  * contracts in <bsp/...>, so it compiles for any target that implements them.
- * Thread stacks are static, which avoids needing the board's memory extents.
+ * That includes the two things a demo used to need board headers for: sizing a
+ * byte pool, which <bsp/memory.h> answers, and running the board's startup
+ * self-tests, which <bsp/selftest.h> answers.
  *
- * Once the board boots this, grow the demo in place. Real targets do include
- * their own board_config.h and vendor headers - for byte-pool sizing and for
- * board-specific startup self-tests - and that is expected; applications live
- * with their target rather than in a shared directory.
+ * Once the board boots this, grow the demo in place. Applications live with
+ * their target rather than in a shared directory.
  */
 
 #include "tx_api.h"
@@ -31,7 +31,10 @@
 #include "bsp/board.h"
 #include "bsp/console.h"
 #include "bsp/led.h"
+#include "bsp/memory.h"
+#include "bsp/selftest.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #define DEMO_STACK_SIZE     1024
@@ -47,6 +50,18 @@ static UCHAR report_stack[DEMO_STACK_SIZE];
 static void console_print(const char *text)
 {
     bsp_console_write(text, strlen(text));
+}
+
+/* The startup checks belong to the board and live in its BSP; this side only
+ * decides how their results are printed. A board with no console of its own
+ * could just as well count failures and blink the LED. */
+static void selftest_report(int passed, const char *message, void *context)
+{
+    (void)context;
+
+    console_print(passed ? "[+] PASS: " : "[-] FAIL: ");
+    console_print(message);
+    console_print("\r\n");
 }
 
 static void blink_thread_entry(ULONG parameter)
@@ -73,11 +88,16 @@ static void report_thread_entry(ULONG parameter)
 
 void tx_application_define(void *first_unused_memory)
 {
-    (void)first_unused_memory;
+    void  *pool_base;
+    size_t pool_size;
 
-    /* TODO: Create a TX_BYTE_POOL from first_unused_memory if this target's
-     * demo outgrows static stacks. Doing so needs the board's RAM extent, so
-     * it belongs with the target rather than in shared code. */
+    /* Stacks below are static, so this pool is unused as shipped. It is here
+     * because it is how a demo grows past static stacks without naming a
+     * single board symbol: the board reports what it has to spare, having
+     * already excluded its own heap and stack reservations. */
+    bsp_ram_region(first_unused_memory, &pool_base, &pool_size);
+    (void)pool_base;
+    (void)pool_size;
 
     (void)tx_thread_create(&blink_thread, "blink thread", blink_thread_entry, 0,
                            blink_stack, DEMO_STACK_SIZE,
@@ -94,8 +114,16 @@ int main(void)
 
     console_print("\r\n=== Eclipse ThreadX target template ===\r\n");
 
-    /* TODO: Run any board-specific startup self-tests here, before the
-     * scheduler starts, so failures are reported even if it never runs. */
+    /* Run the board's startup self-tests before the scheduler starts, so a
+     * failure is reported even if it never runs. */
+    if (bsp_self_test(selftest_report, NULL) == 0U)
+    {
+        console_print("[SELF-TEST] All startup verification tests PASSED!\r\n");
+    }
+    else
+    {
+        console_print("[SELF-TEST] Startup verification FAILED!\r\n");
+    }
 
     tx_kernel_enter();
 

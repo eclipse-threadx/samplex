@@ -14,6 +14,8 @@ add_library(nucleo_bsp STATIC
     src/bsp_board.c
     src/bsp_led.c
     src/bsp_console.c
+    src/bsp_memory.c
+    src/bsp_selftest.c
 )
 
 target_include_directories(nucleo_bsp

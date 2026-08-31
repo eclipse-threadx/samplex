@@ -29,6 +29,12 @@
  */
 #define BSP_RAM_END             0x20018000
 
+/* TODO: Set the number of bytes this board reserves at the top of RAM, if any.
+ * bsp_ram_region() subtracts it so an application's byte pool never overlaps
+ * the main stack. Boards that keep their stack below ThreadX's first unused
+ * address can leave this at 0 and reserve for the C heap instead. */
+#define BSP_MAIN_STACK_RESERVE  4096UL
+
 /* Optional hardware peripheral availability flags */
 #define BSP_HAS_LED             1
 #define BSP_HAS_CONSOLE         1
