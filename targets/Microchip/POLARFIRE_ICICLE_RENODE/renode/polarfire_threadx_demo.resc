@@ -1,0 +1,32 @@
+:name: PolarFire SoC - shared Eclipse ThreadX Device Monitor Demo
+:description: apps/threadx_demo on Microchip PolarFire SoC (Renode 64-Bit RISC-V)
+
+# Interactive counterpart to polarfire_threadx_demo_ci.resc: this one free-runs
+# so the status table can be watched live. It loads the shared portable demo,
+# the same source targets/STMicroelectronics/NUCLEO_F401RE builds.
+
+Clear
+
+using sysbus
+mach create "PolarFire_SoC_Icicle"
+machine LoadPlatformDescription @platforms/cpus/polarfire-soc.repl
+
+# Show terminal analyzer for Hart 1 (u54_1) MMUART1 at 0x20100000
+showAnalyzer mmuart1
+
+# Portable relative path using Renode's built-in $ORIGIN variable
+$bin?=$ORIGIN/../build/app/polarfire_threadx_demo.elf
+
+macro reset
+"""
+    sysbus LoadELF $bin
+    # Route execution directly to Hart 1 (U54 Core 1)
+    u54_1 PC `e51 PC`
+    e51 IsHalted true
+    u54_2 IsHalted true
+    u54_3 IsHalted true
+    u54_4 IsHalted true
+"""
+runMacro $reset
+
+start

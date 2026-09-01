@@ -10,7 +10,7 @@ Should Pass Startup Self-Tests
     Execute Command          include @${CURDIR}/nucleo_f401re_demo.resc
     Create Terminal Tester   sysbus.usart2
 
-    Wait For Line On Uart    NUCLEO-F401RE Device Monitor Demo                     timeout=15
+    Wait For Line On Uart    Eclipse ThreadX Device Monitor Demo                    timeout=15
     Wait For Line On Uart    [SELF-TEST] Starting BSP & Runtime Verification...     timeout=15
     Wait For Line On Uart    [SELF-TEST] All startup verification tests PASSED!     timeout=15
 

@@ -15,6 +15,12 @@ Headless Renode Verification Test for the NUCLEO-F401RE ThreadX Demo.
 Runs targets/STMicroelectronics/NUCLEO_F401RE/renode/nucleo_f401re_ci.resc and
 asserts on the USART2 console output. The run advances a fixed span of virtual
 time and quits on its own, so the result does not depend on host speed.
+
+The application under test is apps/threadx_demo/main.c, shared with the
+Microchip PolarFire SoC Icicle Kit. The assertions below are deliberately the
+same ones targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py
+makes with --app threadx_demo, so the two runs compare the same source built
+for a 32-bit Cortex-M4 and a 64-bit RISC-V hart.
 """
 
 import os
@@ -106,7 +112,10 @@ def run_test(test_timeout_mode=False):
                 if test_timeout_mode:
                     continue
 
-                if "NUCLEO-F401RE Device Monitor Demo" in line:
+                # apps/threadx_demo/main.c prints this, and it names no
+                # board on purpose: the PolarFire suite asserts on the very
+                # same line against the RISC-V build of that same source.
+                if "Eclipse ThreadX Device Monitor Demo" in line:
                     found_banner = True
                 if "[-] FAIL:" in line or "startup verification test(s) FAILED" in line:
                     found_selftest_failure = True

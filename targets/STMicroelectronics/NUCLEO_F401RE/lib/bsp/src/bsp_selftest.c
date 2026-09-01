@@ -80,6 +80,7 @@ unsigned bsp_self_test(bsp_selftest_report_fn report, void *context)
     void   *p_ok;
     void   *p_under;
     void   *p_over;
+    ptrdiff_t heap_taken;
     uint32_t tick_start;
     uint32_t spins;
 
@@ -97,14 +98,23 @@ unsigned bsp_self_test(bsp_selftest_report_fn report, void *context)
                       ((uintptr_t)p_ok < heap_limit),
           "_sbrk() valid allocation inside the heap reservation");
 
-    /* 2. Releasing it returns the break to the heap base, leaving the heap
-     * exactly as the remaining checks found it. */
+    /* 2. Releasing it puts the break back where step 1 found it, leaving the
+     * heap exactly as the remaining checks found it. That is the heap base
+     * only for an application that has not yet allocated. */
     check(&state, _sbrk(-64) != (void *)-1,
           "_sbrk() released 64 bytes back to the heap base");
 
-    /* 3. Shrinking below the heap base is rejected. */
+    /* 3. Shrinking below the heap base is rejected.
+     *
+     * The decrement is derived from the live break rather than fixed. Step 2
+     * only returns the break to where step 1 found it, which is the heap base
+     * only for an application that has not yet allocated; one that reached
+     * printf() first carries a newlib stdio buffer below it, and a fixed -128
+     * would then be an ordinary shrink rather than an underflow. Handing back
+     * one byte more than has ever been taken underflows either way. */
     errno = 0;
-    p_under = _sbrk(-128);
+    heap_taken = (ptrdiff_t)((uintptr_t)_sbrk(0) - heap_base);
+    p_under = _sbrk(-(heap_taken + 1));
     check(&state, (p_under == (void *)-1) && (errno == EINVAL),
           "_sbrk() underflow guard rejected with EINVAL");
 

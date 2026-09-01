@@ -11,13 +11,13 @@
       Eclipse ThreadX contributors - Initial version and validation.
 -->
 
-# Eclipse ThreadX NUCLEO-F401RE Starter Application
+# Eclipse ThreadX NUCLEO-F401RE Target
 
-This demonstration application validates the NUCLEO-F401RE Board Support Package for Eclipse ThreadX.
+This target validates the NUCLEO-F401RE Board Support Package for Eclipse ThreadX.
 
-The demo creates multiple threads, blinks the onboard LED, and reports runtime statistics through USART2 using the ST-LINK virtual COM port.
+The application it builds is **`apps/threadx_demo/main.c`**, the shared portable demo, not a source file of its own. That same file is built by `targets/Microchip/POLARFIRE_ICICLE_RENODE` for 64-bit RISC-V, and CI asserts on the same console output from both, so this target's role is to prove the BSP contracts hold on 32-bit Cortex-M4. The demo creates multiple threads, blinks the onboard LED, and reports runtime statistics through USART2 using the ST-LINK virtual COM port; it reaches all three through `<bsp/...>` and names no STM32 symbol.
 
-It integrates the Eclipse ThreadX RTOS with the STM32CubeF4 HAL library in a clean, self-contained CMake build structure.
+Everything board-specific lives under `lib/bsp/` and `app/common/`: this target integrates the Eclipse ThreadX RTOS with the STM32CubeF4 HAL library in a clean, self-contained CMake build structure.
 
 Third-party licensing information is provided in [NOTICE.md](NOTICE.md).
 
@@ -126,7 +126,7 @@ To view console output:
 
 ## Hardware Configuration
 
-The starter application is preconfigured to work with the physical STMicroelectronics NUCLEO-F401RE board:
+The BSP is preconfigured to work with the physical STMicroelectronics NUCLEO-F401RE board:
 - **MCU**: Single-core ARM Cortex-M4 running at 84 MHz
 - **Onboard User LED**: LD2 connected to pin `PA5` for heartbeat feedback
 - **UART Console**: USART2 connected to the ST-Link virtual COM port on pins `PA2` (TX) and `PA3` (RX) configured for 115200 baud, 8N1
@@ -172,6 +172,7 @@ The BSP separates the ThreadX scheduler tick from the STM32 HAL timebase to avoi
 
 - **USART2**
   - Operates in polling mode and does not use interrupts in this demonstration.
+  - `bsp_console_set_rx_handler()` is therefore implemented as a store only: the handler an application registers is kept, but nothing on this board delivers received bytes one at a time to invoke it. `nucleo_console_rx_dispatch()` in `lib/bsp/src/bsp_console.c` is the hook a `USART2_IRQHandler` would call. The contract is honoured anyway so a portable application can register unconditionally.
 
 ### HAL Timebase Integration 
 
@@ -182,14 +183,17 @@ The BSP overrides `HAL_InitTick()` to configure TIM2 as the HAL timebase and pro
 
 ## File Organization
 
-- **`app/`**: Main application logic and boot setups
+- **`../../../apps/threadx_demo/`**: The application this target builds. Shared
+  with the PolarFire SoC Icicle Kit; nothing in it is board specific.
+- **`app/`**: Boot setup and the CMake glue that pulls in the shared application
   - **`app/common/`**: Vendor HAL MSP hooks and boot sources
   - **`app/common/startup/`**: Linker scripts and assembly boot startup code
-  - **`app/starter/`**: Demo main thread logic
 - **`lib/`**: Libraries and dependencies
   - **`lib/bsp/`**: Board support implementing the generic `<bsp/*.h>` interfaces
     (`bsp_board.c` clocks and HAL timebase, `bsp_led.c` LD2, `bsp_console.c`
-    USART2, `newlib_stubs.c` newlib syscall overrides)
+    USART2 and the receive-handler registration, `bsp_memory.c` the application
+    RAM budget, `bsp_selftest.c` the startup checks, `newlib_stubs.c` newlib
+    syscall overrides)
   - **`lib/stm32cubef4/`**: HAL Driver wrapper and platform drivers
   - **`lib/threadx/`**: ThreadX user configuration file (`tx_user.h`)
 - **`cmake/`**: Cross-compilation module definitions

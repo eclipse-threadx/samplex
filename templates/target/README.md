@@ -49,8 +49,12 @@ To maintain long-term framework maintainability and portability, the following r
 * `/bsp`: Defines the target-agnostic C interface contracts (`board.h`, `led.h`, `console.h`, `memory.h`, `selftest.h`). New board targets must implement these existing interfaces rather than modifying core interface definitions.
 * `/libs`: Shared RTOS components consumed by every target as submodules. Targets reference these rather than vendoring their own copy.
 
+* `/apps`: Portable applications that any target can build. `apps/threadx_demo/main.c` is built today by both shipped targets from the one source file, and CI runs it under Renode on 32-bit Cortex-M4 and 64-bit RISC-V. Point a new board's `app/CMakeLists.txt` at it to get a demo for free; extend it only in ways that stay board-neutral.
+
 > [!NOTE]
-> **Applications are currently target-resident.** Each target owns its demo under `targets/<Vendor>/<Board>/app/`, along with its own `cmake/` toolchain files and build helpers. A shared `/apps` layer is a goal of this framework, not something it provides yet, so onboard a new board by starting from the app in this template rather than by linking one from a shared directory. What a demo no longer needs is board headers: `<bsp/memory.h>` covers byte-pool sizing and `<bsp/selftest.h>` covers startup self-tests, so both shipped demos include only `<tx_api.h>` and `<bsp/...>`.
+> **A demo belongs in `/apps` or with its board, and what it names decides which.** An application that names no board symbol, vendor header or linker-defined address is portable and belongs in `apps/`; one that does belongs under `targets/<Vendor>/<Board>/app/`. Both are legitimate - the PolarFire SoC Icicle Kit keeps its LM75 monitor as a target app because it genuinely models a sensor, and builds the shared demo as a second executable alongside it. A target's `app/CMakeLists.txt` picks either.
+>
+> What no demo needs any more is board headers. `<bsp/memory.h>` covers byte-pool sizing and `<bsp/selftest.h>` covers startup self-tests, so every shipped demo includes only C standard headers, `<tx_api.h>` and `<bsp/...>`.
 
 > [!NOTE]
 > **Core Architectural Principle**:
@@ -75,7 +79,8 @@ The table below maps common embedded software components to their designated loc
 | **BSP Driver Implementation** | `targets/<Vendor>/<BOARD>/lib/bsp/src/` | Target developer (`bsp_board.c`, `bsp_led.c`, `bsp_console.c`, `bsp_memory.c`, `bsp_selftest.c`) |
 | **Target Specification Constants** | `targets/<Vendor>/<BOARD>/lib/bsp/include/board_config.h` | Target developer (declarative defines only) |
 | **Target Build Automation** | `targets/<Vendor>/<BOARD>/scripts/build.ps1` | Target developer (PowerShell automation template) |
-| **Application Code** | `targets/<Vendor>/<BOARD>/app/` | Target developer (start from this template's `app/main.c`) |
+| **Portable Application Code** | `apps/<name>/` | Shared across targets (`apps/threadx_demo/` builds on every target) |
+| **Board-Specific Application Code** | `targets/<Vendor>/<BOARD>/app/` | Target developer (start from this template's `app/main.c`) |
 | **Toolchain & Build Helpers** | `targets/<Vendor>/<BOARD>/cmake/` | Target developer (cross-compilation settings per target) |
 
 ---
@@ -101,7 +106,7 @@ To add support for a new board (e.g. `MY_VENDOR / MY_BOARD`):
    Populate the driver stubs in `targets/MyVendor/MY_BOARD/lib/bsp/src/`:
    - `bsp_board.c`: Configure System Clocks, Flash Wait States, and low-level timers in `bsp_board_init()`.
    - `bsp_led.c`: Configure GPIO pin muxing and implement `bsp_led_on()`, `bsp_led_off()`, `bsp_led_toggle()`.
-   - `bsp_console.c`: Configure UART peripheral and implement `bsp_console_write()`.
+   - `bsp_console.c`: Configure the UART peripheral and implement `bsp_console_write()`. Store what `bsp_console_set_rx_handler()` is given even if this board only polls its console; if the board does raise a receive interrupt, dispatch to the stored handler from its IRQ handler rather than calling a symbol the application must define. A BSP that requires an application-defined symbol cannot be linked by an application that does not want it.
    - `bsp_memory.c`: Report the RAM the application may claim in `bsp_ram_region()`, subtracting whatever this board reserves for its C heap and stacks.
    - `bsp_selftest.c`: Verify in `bsp_self_test()` that the board came up as configured - clocks, timebase, interrupt routing, and that the C heap cannot grow into the region `bsp_ram_region()` hands out.
 
@@ -115,7 +120,7 @@ To add support for a new board (e.g. `MY_VENDOR / MY_BOARD`):
    The target's CMake build scripts are responsible for exposing include paths and linking the BSP drivers, vendor SDK, ThreadX kernel, and shared application executable together into the final firmware image:
    - Update `targets/MyVendor/MY_BOARD/CMakeLists.txt` with your target project name and any required vendor SDK configuration.
    - Update `targets/MyVendor/MY_BOARD/lib/CMakeLists.txt` to register vendor SDK libraries and subdirectories.
-   - Update `targets/MyVendor/MY_BOARD/app/CMakeLists.txt` to register startup assembly files, system initialization code, linker scripts, target BSP sources, and link against the required ThreadX libraries.
+   - Update `targets/MyVendor/MY_BOARD/app/CMakeLists.txt` to register startup assembly files, system initialization code, linker scripts, target BSP sources, and link against the required ThreadX libraries. Point it either at `${SAMPLEX_ROOT_DIR}/apps/threadx_demo/main.c` for the shared portable demo or at this template's own `app/main.c` to grow a board-specific one.
 
 7. **Build and Test**:
    Run the PowerShell build script:
@@ -135,7 +140,7 @@ The current framework defines the following core baseline C interfaces in `/bsp/
 | :--- | :--- | :--- |
 | `<bsp/board.h>` | `bsp_board_init()` | Core MCU clock tree, power scaling, and flash wait state setup. |
 | `<bsp/led.h>` | `bsp_led_init()`, `bsp_led_toggle()`, etc. | GPIO user LED initialization and state toggling. |
-| `<bsp/console.h>` | `bsp_console_init()`, `bsp_console_write()` | Serial UART initialization and output transmission. |
+| `<bsp/console.h>` | `bsp_console_init()`, `bsp_console_write()`, `bsp_console_set_rx_handler()` | Serial UART initialization, output transmission, and registration of a receive handler. |
 | `<bsp/memory.h>` | `bsp_ram_region()` | RAM the application may claim, clamped against the board's own heap and stack reservations. |
 | `<bsp/selftest.h>` | `bsp_self_test()` | Board startup verification, reported through an application-supplied callback. |
 
@@ -148,4 +153,4 @@ The current framework defines the following core baseline C interfaces in `/bsp/
 > [!TIP]
 > **Optional Interfaces & Hardware Variants**:
 > * The baseline interfaces currently cover core board setup, user LED control, and debug console output. Future versions of the BSP framework may introduce additional optional interfaces (e.g., non-volatile storage, networking, I2C/SPI bus drivers).
-> * If a specific target board lacks dedicated LED or UART hardware, implement the interface functions as **no-op implementations** so that generic application binaries continue to link and execute cleanly.
+> * If a specific target board lacks dedicated LED or UART hardware, implement the interface functions as **no-op implementations** so that generic application binaries continue to link and execute cleanly. The same applies to `bsp_console_set_rx_handler()` on a board with no receive path: accept and store the handler, and simply never invoke it.

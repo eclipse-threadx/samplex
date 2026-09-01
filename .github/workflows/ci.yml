@@ -61,20 +61,26 @@ jobs:
       - name: Report the toolchain version
         run: riscv-none-elf-gcc --version
 
-      - name: Build SampleX PolarFire Condition-Monitoring Demo
+      - name: Build SampleX PolarFire Executables
         run: |
           bash targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/build.sh --rebuild
 
-      - name: Verify SampleX Demo ELF
+      - name: Verify Both PolarFire ELFs
         run: |
+          # Two executables: the board's own LM75 demo, and the shared portable
+          # demo from apps/threadx_demo that the NUCLEO-F401RE builds from the
+          # very same source.
           test -f targets/Microchip/POLARFIRE_ICICLE_RENODE/build/app/polarfire_icicle_demo.elf
-          echo "[OK] PolarFire SampleX demo ELF verified."
+          test -f targets/Microchip/POLARFIRE_ICICLE_RENODE/build/app/polarfire_threadx_demo.elf
+          echo "[OK] PolarFire LM75 and shared ThreadX demo ELFs verified."
 
-      - name: Archive Built PolarFire ELF
+      - name: Archive Built PolarFire ELFs
         uses: actions/upload-artifact@v4
         with:
           name: polarfire-demo-elf
-          path: targets/Microchip/POLARFIRE_ICICLE_RENODE/build/app/polarfire_icicle_demo.elf
+          path: |
+            targets/Microchip/POLARFIRE_ICICLE_RENODE/build/app/polarfire_icicle_demo.elf
+            targets/Microchip/POLARFIRE_ICICLE_RENODE/build/app/polarfire_threadx_demo.elf
           retention-days: 1
 
   test-polarfire-renode:
@@ -98,7 +104,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Download Built PolarFire ELF
+      - name: Download Built PolarFire ELFs
         uses: actions/download-artifact@v4
         with:
           name: polarfire-demo-elf
@@ -125,9 +131,17 @@ jobs:
       - name: Put Renode on PATH
         run: echo "$HOME/renode" >> $GITHUB_PATH
 
-      - name: Run Deterministic Headless Renode Test
+      - name: Run Deterministic Headless Renode Test (LM75 demo)
         run: |
-          python3 targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py
+          python3 targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py --app lm75
+
+      # The other half of the portability claim. apps/threadx_demo/main.c is
+      # asserted here on 64-bit RISC-V and in test-nucleo-renode on 32-bit
+      # Cortex-M4, against the same console output from the same source file.
+      # A claim only one architecture verifies is not a claim.
+      - name: Run Deterministic Headless Renode Test (shared ThreadX demo)
+        run: |
+          python3 targets/Microchip/POLARFIRE_ICICLE_RENODE/scripts/test_renode.py --app threadx_demo
 
   build-arm-nucleo:
     name: Build ST Nucleo-F401RE (ARM Cortex-M4)
@@ -181,6 +195,8 @@ jobs:
       - name: Report the toolchain version
         run: ${{ env.GCC_TARGET }}-gcc --version
 
+      # Builds apps/threadx_demo/main.c, the same application source the
+      # PolarFire SoC Icicle Kit job builds for 64-bit RISC-V.
       - name: Build NUCLEO-F401RE Demo
         run: |
           bash targets/STMicroelectronics/NUCLEO_F401RE/scripts/build.sh --rebuild

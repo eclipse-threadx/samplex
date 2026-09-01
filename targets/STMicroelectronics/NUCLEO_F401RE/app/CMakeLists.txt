@@ -7,7 +7,12 @@
 #  SPDX-License-Identifier: MIT
 
 set(COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/common)
-set(STARTER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/starter)
+
+# The shared portable demo, built from apps/ rather than from this target. It
+# names no board symbol, so the PolarFire SoC Icicle Kit builds the same file.
+# A board-specific application would live here under app/ instead; a target
+# picks one or the other.
+set(SHARED_APP_DIR ${SAMPLEX_ROOT_DIR}/apps/threadx_demo)
 
 set(SOURCES
     ${COMMON_DIR}/startup/system_stm32f4xx.c
@@ -20,7 +25,7 @@ set(SOURCES
     # libnucleo_bsp.a so the linker always takes these definitions instead of
     # falling back to the libnosys stubs.
     ${CMAKE_CURRENT_SOURCE_DIR}/../lib/bsp/src/newlib_stubs.c
-    ${STARTER_DIR}/main.c
+    ${SHARED_APP_DIR}/main.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -35,7 +40,6 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${COMMON_DIR}
-        ${STARTER_DIR}
 )
 
 # Linker script
