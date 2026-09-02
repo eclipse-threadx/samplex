@@ -23,7 +23,7 @@ set(HAL_REQUIRED_COMPONENTS cortex pwr rcc)
 set(HAL_EX_COMPONENTS adc cryp dac dcmi dma flash fmpi2c hash i2c i2s pcd
                         pwr rcc rtc sai tim)
 
-set(HAL_PREFIX stm32f7xx_)
+set(HAL_PREFIX stm32f4xx_)
 
 set(HAL_HEADERS
 	${HAL_PREFIX}hal.h
