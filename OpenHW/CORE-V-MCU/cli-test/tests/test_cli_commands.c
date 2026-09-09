@@ -21,16 +21,23 @@
 static int test_version_output(void)
 {
     const struct cli_cmd_entry *menu;
+    const struct cli_cmd_entry *misc_menu;
     const char *output;
 
     cli_mock_reset();
     menu = app_get_menu();
-    if ((menu == NULL) || (menu[0].pHandler == NULL))
+    if ((menu == NULL) || (menu[0].pHandler == NULL) || (menu[0].cookie == 0))
     {
         return 1;
     }
 
-    menu[0].pHandler(&menu[0]);
+    misc_menu = (const struct cli_cmd_entry *)(uintptr_t)menu[0].cookie;
+    if ((misc_menu == NULL) || (misc_menu[0].pHandler == NULL))
+    {
+        return 1;
+    }
+
+    misc_menu[0].pHandler(&misc_menu[0]);
     output = cli_mock_get_output();
     if (strstr(output, "CORE-V MCU ThreadX") == NULL)
     {
@@ -44,15 +51,22 @@ static int test_version_output(void)
 static int test_version_no_crash(void)
 {
     const struct cli_cmd_entry *menu;
+    const struct cli_cmd_entry *misc_menu;
 
     cli_mock_reset();
     menu = app_get_menu();
-    if ((menu == NULL) || (menu[0].pHandler == NULL))
+    if ((menu == NULL) || (menu[0].pHandler == NULL) || (menu[0].cookie == 0))
     {
         return 1;
     }
 
-    menu[0].pHandler(&menu[0]);
+    misc_menu = (const struct cli_cmd_entry *)(uintptr_t)menu[0].cookie;
+    if ((misc_menu == NULL) || (misc_menu[0].pHandler == NULL))
+    {
+        return 1;
+    }
+
+    misc_menu[0].pHandler(&misc_menu[0]);
     return 0;
 }
 
