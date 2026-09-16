@@ -9,8 +9,9 @@
  *
  * Contributors:
  *    Ali Eissa - 2026 version.
- *    Assisted-by: Google DeepMind Antigravity (Gemini 3.8 Flash)
  */
+
+// Portions of this file were generated with AI assistance.
 
 #include "bsp/led.h"
 #include "board_config.h"
