@@ -1,0 +1,45 @@
+#  Copyright (c) 2026 Eclipse ThreadX contributors
+# 
+#  This program and the accompanying materials are made available 
+#  under the terms of the MIT license which is available at
+#  https://opensource.org/license/mit.
+# 
+#  SPDX-License-Identifier: MIT
+# 
+#  Contributors: 
+#     Ali Eissa - 2026 version.
+
+:name: MIMXRT1064-EVK ThreadX Demo
+:description: This script runs the Eclipse ThreadX & NetX Duo demo on NXP i.MX RT1064-EVK.
+
+mach create "mimxrt1064-evk"
+
+$platform?=$ORIGIN/mimxrt1064-evk.repl
+machine LoadPlatformDescription $platform
+
+$bin?=$ORIGIN/../build/app/demos/netx_echo/mimxrt1064_threadx.elf
+
+# Create Ethernet Switch and connect ENET peripheral
+emulation CreateSwitch "switch"
+connector Connect sysbus.enet switch
+
+# Host TAP networking configuration (for ICMP ping and UDP/TCP echo from host PC):
+# On Windows, install OpenVPN/TAP adapter named "renode-tap" configured with IP 192.168.0.1 / 255.255.255.0.
+# On Linux, create tap interface: `sudo ip tuntap add mode tap tap0 && sudo ifconfig tap0 192.168.0.1 up`
+# Uncomment below lines to bridge the simulated switch to your host TAP device:
+# emulation CreateTap "renode-tap" "tap"
+# connector Connect host.tap switch
+
+showAnalyzer sysbus.lpuart1
+
+macro reset
+"""
+    cpu VectorTableOffset 0x70002000
+    sysbus LoadELF $bin
+    cpu PC `sysbus ReadDoubleWord 0x70002004`
+    cpu SP `sysbus ReadDoubleWord 0x70002000`
+"""
+
+runMacro $reset
+
+start

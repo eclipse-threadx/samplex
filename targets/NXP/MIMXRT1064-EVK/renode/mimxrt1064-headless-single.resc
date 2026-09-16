@@ -1,0 +1,35 @@
+#  Copyright (c) 2026 Eclipse ThreadX contributors
+# 
+#  This program and the accompanying materials are made available 
+#  under the terms of the MIT license which is available at
+#  https://opensource.org/license/mit.
+# 
+#  SPDX-License-Identifier: MIT
+# 
+#  Contributors: 
+#     Ali Eissa - 2026 version.
+
+:name: MIMXRT1064-EVK Headless Single-Node CI Test
+:description: Headless single-node verification capturing LPUART1 output to log file.
+
+using sysbus
+mach create "mimxrt1064-evk"
+$platform?=$ORIGIN/mimxrt1064-evk.repl
+machine LoadPlatformDescription $platform
+
+showAnalyzer sysbus.lpuart1
+
+$bin?=$ORIGIN/../build/app/demos/threadx_basic/mimxrt1064_threadx.elf
+
+macro reset
+"""
+    sysbus LoadELF $bin
+    cpu VectorTableOffset 0x70002000
+    cpu PC `sysbus ReadDoubleWord 0x70002004`
+    cpu SP `sysbus ReadDoubleWord 0x70002000`
+"""
+runMacro $reset
+
+emulation RunFor "4"
+
+quit

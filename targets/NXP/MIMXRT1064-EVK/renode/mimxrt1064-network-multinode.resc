@@ -1,0 +1,62 @@
+#  Copyright (c) 2026 Eclipse ThreadX contributors
+# 
+#  This program and the accompanying materials are made available 
+#  under the terms of the MIT license which is available at
+#  https://opensource.org/license/mit.
+# 
+#  SPDX-License-Identifier: MIT
+# 
+#  Contributors: 
+#     Ali Eissa - 2026 version.
+
+:name: MIMXRT1064-EVK NetX Duo Two-Node Virtual Network Verification
+:description: This script creates two MIMXRT1064-EVK nodes connected via a virtual Ethernet switch:
+:             - "server": Echo Server on 192.168.0.100 (ICMP Ping, UDP port 7, TCP port 7)
+:             - "client": Verification Client on 192.168.0.101 (tests ICMP, UDP Echo, TCP Echo)
+
+# 1. Create Virtual Ethernet Switch
+emulation CreateSwitch "switch"
+
+# 2. Server Machine (192.168.0.100)
+mach create "server"
+machine LoadPlatformDescription $ORIGIN/mimxrt1064-evk.repl
+connector Connect sysbus.enet switch
+showAnalyzer sysbus.lpuart1
+
+$bin_server?=$ORIGIN/../build/mimxrt1064_threadx.elf
+macro reset_server
+"""
+    cpu VectorTableOffset 0x70002000
+    sysbus LoadELF $bin_server
+    cpu PC `sysbus ReadDoubleWord 0x70002004`
+    cpu SP `sysbus ReadDoubleWord 0x70002000`
+"""
+runMacro $reset_server
+
+# 3. Client Machine (192.168.0.101)
+mach create "client"
+machine LoadPlatformDescription $ORIGIN/mimxrt1064-evk.repl
+connector Connect sysbus.enet switch
+showAnalyzer sysbus.lpuart1
+
+$bin_client?=$ORIGIN/../build/mimxrt1064_client.elf
+macro reset_client
+"""
+    cpu VectorTableOffset 0x70002000
+    sysbus LoadELF $bin_client
+    cpu PC `sysbus ReadDoubleWord 0x70002004`
+    cpu SP `sysbus ReadDoubleWord 0x70002000`
+"""
+runMacro $reset_client
+
+# 4. Global reset macro to reset both nodes simultaneously
+macro reset
+"""
+    mach set "server"
+    runMacro $reset_server
+    mach set "client"
+    runMacro $reset_client
+"""
+
+# 5. Start Simulation
+start

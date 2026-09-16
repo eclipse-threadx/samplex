@@ -1,0 +1,30 @@
+// Copyright (c) 2026 Eclipse ThreadX contributors
+//
+// This program and the accompanying materials are made available
+// under the terms of the MIT license which is available at
+// https://opensource.org/license/mit.
+//
+// SPDX-License-Identifier: MIT
+//
+// Contributors:
+//    Ali Eissa - 2026 version.
+
+using "platforms/boards/mimxrt1064_evk.repl"
+
+// User LED D18 (Green, active low, connected to GPIO1 Pin 9)
+gpio1:
+    9 -> user_led@0
+
+user_led: Miscellaneous.LED @ gpio1 9
+    invert: true
+
+// Ethernet Physical Layer (KSZ8081 PHY at address 2 on enet)
+phy: Network.EthernetPhysicalLayer @ enet 2
+    Id1: 0x0022
+    Id2: 0x1560
+    BasicControl: 0x3100
+    BasicStatus: 0x782D
+    AutoNegotiationAdvertisement: 0x01E1
+    AutoNegotiationLinkPartnerBasePageAbility: 0x01E1
+    VendorSpecific14: 0x0116
+    VendorSpecific15: 0x0080

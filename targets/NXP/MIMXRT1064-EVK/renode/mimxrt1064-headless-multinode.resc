@@ -1,0 +1,53 @@
+#  Copyright (c) 2026 Eclipse ThreadX contributors
+# 
+#  This program and the accompanying materials are made available 
+#  under the terms of the MIT license which is available at
+#  https://opensource.org/license/mit.
+# 
+#  SPDX-License-Identifier: MIT
+# 
+#  Contributors: 
+#     Ali Eissa - 2026 version.
+
+:name: MIMXRT1064-EVK Headless Multi-Node CI Test
+
+$platform?=$ORIGIN/mimxrt1064-evk.repl
+$bin_server?=$ORIGIN/../build/app/demos/netx_echo/mimxrt1064_threadx.elf
+$bin_client?=$ORIGIN/../build/app/demos/netx_echo/mimxrt1064_client.elf
+
+# 1. Create Virtual Ethernet Switch
+emulation CreateSwitch "switch"
+
+# 2. Server Machine (192.168.0.100)
+mach create "server"
+machine LoadPlatformDescription $platform
+connector Connect sysbus.enet switch
+
+macro reset
+"""
+    sysbus LoadELF $bin_server
+    cpu VectorTableOffset 0x70002000
+    cpu PC `sysbus ReadDoubleWord 0x70002004`
+    cpu SP `sysbus ReadDoubleWord 0x70002000`
+"""
+runMacro $reset
+
+# 3. Client Machine (192.168.0.101)
+mach create "client"
+machine LoadPlatformDescription $platform
+connector Connect sysbus.enet switch
+showAnalyzer sysbus.lpuart1
+
+macro reset
+"""
+    sysbus LoadELF $bin_client
+    cpu VectorTableOffset 0x70002000
+    cpu PC `sysbus ReadDoubleWord 0x70002004`
+    cpu SP `sysbus ReadDoubleWord 0x70002000`
+"""
+runMacro $reset
+
+# 4. Start Simulation
+emulation RunFor "6"
+
+quit

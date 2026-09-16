@@ -1,0 +1,10 @@
+# Build artifacts
+build/
+*.elf
+*.bin
+*.hex
+*.map
+
+# Downloaded SDK dependencies
+lib/mcux-sdk/
+temp_fetch/

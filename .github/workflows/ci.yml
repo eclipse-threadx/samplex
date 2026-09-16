@@ -15,6 +15,7 @@ on:
     branches: [ main, master, dev, 'feat/**' ]
   pull_request:
     branches: [ main, master, dev ]
+  workflow_dispatch:
 
 jobs:
   build-riscv-polarfire:
@@ -262,3 +263,180 @@ jobs:
       - name: Run Deterministic Headless Renode Test
         run: |
           python3 targets/STMicroelectronics/NUCLEO_F401RE/scripts/test_renode.py
+
+  build-arm-nxp:
+    name: Build NXP i.MX RT1064 (ARM Cortex-M7)
+    runs-on: ubuntu-24.04
+
+    env:
+      GCC_VERSION: 14.3.rel1
+      GCC_TARGET: arm-none-eabi
+      CMSIS_VERSION: 5.9.0
+      NXP_DFP_VERSION: 15.1.0
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install CMake and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Cache the Arm GNU toolchain
+        id: cache-arm-gcc
+        uses: actions/cache@v4
+        with:
+          path: toolchain
+          key: arm-gnu-toolchain-${{ env.GCC_VERSION }}-x86_64-${{ env.GCC_TARGET }}
+
+      - name: Install the Arm GNU toolchain
+        if: steps.cache-arm-gcc.outputs.cache-hit != 'true'
+        run: |
+          set -eu
+          base="https://developer.arm.com/-/media/Files/downloads/gnu/${GCC_VERSION}/binrel"
+          archive="arm-gnu-toolchain-${GCC_VERSION}-x86_64-${GCC_TARGET}.tar.xz"
+          mkdir -p toolchain && cd toolchain
+          curl -fsSLO "$base/$archive"
+          curl -fsSLO "$base/$archive.sha256asc"
+          sha256sum -c "$archive.sha256asc"
+          tar xf "$archive"
+          rm -f "$archive"
+
+      - name: Put the toolchain on PATH
+        run: |
+          set -eu
+          echo "$GITHUB_WORKSPACE/toolchain/arm-gnu-toolchain-${GCC_VERSION}-x86_64-${GCC_TARGET}/bin" >> "$GITHUB_PATH"
+
+      - name: Report the toolchain version
+        run: ${{ env.GCC_TARGET }}-gcc --version
+
+      - name: Cache NXP SDK & CMSIS Dependencies
+        id: cache-nxp-sdk
+        uses: actions/cache@v4
+        with:
+          path: targets/NXP/MIMXRT1064-EVK/lib/mcux-sdk
+          key: nxp-sdk-${{ env.NXP_DFP_VERSION }}-cmsis-${{ env.CMSIS_VERSION }}-${{ hashFiles('targets/NXP/MIMXRT1064-EVK/scripts/fetch_sdk.sh') }}
+
+      - name: Fetch NXP SDK & CMSIS Dependencies
+        if: steps.cache-nxp-sdk.outputs.cache-hit != 'true'
+        run: |
+          bash targets/NXP/MIMXRT1064-EVK/scripts/fetch_sdk.sh
+
+      - name: Build All NXP MIMXRT1064-EVK Demos
+        run: |
+          bash targets/NXP/MIMXRT1064-EVK/scripts/build.sh --demo all --rebuild
+
+      - name: Verify Built NXP ELFs
+        run: |
+          test -f targets/NXP/MIMXRT1064-EVK/build/app/demos/threadx_basic/mimxrt1064_threadx.elf
+          test -f targets/NXP/MIMXRT1064-EVK/build/app/demos/netx_echo/mimxrt1064_threadx.elf
+          test -f targets/NXP/MIMXRT1064-EVK/build/app/demos/netx_echo/mimxrt1064_client.elf
+          test -f targets/NXP/MIMXRT1064-EVK/build/app/demos/netx_trng_console/mimxrt1064_threadx.elf
+          test -f targets/NXP/MIMXRT1064-EVK/build/app/demos/netx_trng_console/mimxrt1064_client.elf
+          echo "[OK] All NXP MIMXRT1064-EVK demo ELFs verified."
+
+      - name: Archive Built NXP ELFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nxp-mimxrt1064-demo-elfs
+          path: targets/NXP/MIMXRT1064-EVK/build/app/demos/
+          retention-days: 1
+
+  test-nxp-renode:
+    name: Headless Renode Emulation & Assertion Test (NXP i.MX RT1064)
+    needs: build-arm-nxp
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      RENODE_VERSION: 1.16.1
+      RENODE_SHA256: 1a532d4b5b82de0dd154970c401e0c7b0e498d17304b2cecc007e306c8f9617c
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download Built NXP ELFs
+        uses: actions/download-artifact@v4
+        with:
+          name: nxp-mimxrt1064-demo-elfs
+          path: targets/NXP/MIMXRT1064-EVK/build/app/demos
+
+      - name: Inspect Downloaded ELF Artifacts
+        run: |
+          echo "=== Extracted NXP Demo ELF Artifacts ==="
+          ls -laR targets/NXP/MIMXRT1064-EVK/build/app/demos/
+
+      - name: Cache the portable Renode environment
+        id: cache-renode
+        uses: actions/cache@v4
+        with:
+          path: ~/renode
+          key: renode-${{ env.RENODE_VERSION }}-linux-portable
+
+      - name: Install Pinned Portable Renode Emulation Environment
+        if: steps.cache-renode.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          TARBALL="renode-${RENODE_VERSION}.linux-portable.tar.gz"
+          wget -q "https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/${TARBALL}"
+          echo "${RENODE_SHA256}  ${TARBALL}" | sha256sum --check --strict
+          mkdir -p $HOME/renode
+          tar -xzf "${TARBALL}" -C $HOME/renode --strip-components=1
+          rm "${TARBALL}"
+
+      - name: Install Renode System Prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libx11-6 libxkbcommon-x11-0 libxcb1 strace
+
+      - name: Put Renode on PATH
+        run: echo "$HOME/renode" >> $GITHUB_PATH
+
+      - name: Link Renode Scripts & Dependencies
+        run: |
+          ln -sf $HOME/renode/scripts $HOME/renode/bin/scripts 2>/dev/null || true
+          ln -sf $HOME/renode/platforms $HOME/renode/bin/platforms 2>/dev/null || true
+
+      - name: Report Runner Environment & Diagnostics
+        run: |
+          echo "=== System Architecture & Kernel ==="
+          uname -a
+          lsb_release -a
+          echo "=== Renode Version ==="
+          renode --version
+          echo "=== Python Version ==="
+          python3 --version
+
+
+      - name: Run Deterministic Headless Renode Test (threadx_basic)
+        run: |
+          python3 targets/NXP/MIMXRT1064-EVK/scripts/test_renode.py --demo threadx_basic
+
+      - name: Run Deterministic Headless Renode Test (netx_echo)
+        run: |
+          python3 targets/NXP/MIMXRT1064-EVK/scripts/test_renode.py --demo netx_echo
+
+      - name: Run Deterministic Headless Renode Test (netx_trng_console)
+        run: |
+          python3 targets/NXP/MIMXRT1064-EVK/scripts/test_renode.py --demo netx_trng_console --seed 12345
+
+      - name: Upload Renode Execution Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nxp-renode-execution-logs
+          path: |
+            targets/NXP/MIMXRT1064-EVK/build/*.log
+            targets/NXP/MIMXRT1064-EVK/*.log
+          if-no-files-found: ignore
+
