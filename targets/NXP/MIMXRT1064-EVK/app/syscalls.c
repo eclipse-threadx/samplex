@@ -11,6 +11,8 @@
  *    Ali Eissa - 2026 version.
  */
 
+// Portions of this file were generated with AI assistance.
+
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <errno.h>

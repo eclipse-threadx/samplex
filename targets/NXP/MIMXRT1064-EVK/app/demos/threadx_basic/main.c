@@ -11,6 +11,8 @@
  *    Ali Eissa - 2026 version.
  */
 
+// Portions of this file were generated with AI assistance.
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>

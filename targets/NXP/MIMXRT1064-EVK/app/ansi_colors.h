@@ -11,6 +11,8 @@
  *     Ali Eissa - 2026 version.
  */
 
+// Portions of this file were generated with AI assistance.
+
 #ifndef ANSI_COLORS_H
 #define ANSI_COLORS_H
 

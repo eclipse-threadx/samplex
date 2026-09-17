@@ -11,6 +11,8 @@
  *    Ali Eissa - 2026 version.
  */
 
+// Portions of this file were generated with AI assistance.
+
 /*
  * Compatibility header: redirects MIMXRT1062.h from stock NetX Duo driver
  * to MIMXRT1064 device registers without modifying vendor source files.
