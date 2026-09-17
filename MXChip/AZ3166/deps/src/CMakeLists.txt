@@ -16,7 +16,7 @@ set(TARGET app_common)
 # Initialize sources
 set(SOURCES "")
 
-# Allow to disable the newlib stubbing
+# Add the sample's Newlib system-call glue unless the BSP provides its own.
 if(NOT DEFINED DISABLE_NEWLIB_STUB) 
     list(APPEND SOURCES
         newlib_nano.c
