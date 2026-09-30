@@ -20,6 +20,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 add_executable(cli_tests
     test_cli_commands.c
     mock/cli_mock.c
+    mock/cli_core_mock.c
+    mock/hardware_mock.c
     ../app/app_commands.c
 )
 
