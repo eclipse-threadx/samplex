@@ -10,6 +10,7 @@
   *
   * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
   * All rights reserved.</center></h2>
+  * Copyright (c) 2026 Eclipse ThreadX contributors
   *
   * This software component is licensed by ST under BSD 3-Clause license,
   * the "License"; You may not use this file except in compliance with the
@@ -17,7 +18,9 @@
   *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
-  */ 
+  */
+// Portions of this file were generated with AI assistance.
+
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F4xx_HAL_CONF_H
@@ -64,7 +67,7 @@
 #define HAL_PWR_MODULE_ENABLED
 /* #define HAL_QSPI_MODULE_ENABLED */
 #define HAL_RCC_MODULE_ENABLED
-/* #define HAL_RNG_MODULE_ENABLED */
+#define HAL_RNG_MODULE_ENABLED
 /* #define HAL_RTC_MODULE_ENABLED */
 /* #define HAL_SAI_MODULE_ENABLED */
 /* #define HAL_SD_MODULE_ENABLED */

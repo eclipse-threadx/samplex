@@ -1,6 +1,7 @@
 /* 
  * Copyright (c) Microsoft
  * Copyright (c) 2024 Eclipse Foundation
+ * Copyright (c) 2026 Eclipse ThreadX contributors
  * 
  *  This program and the accompanying materials are made available 
  *  under the terms of the MIT license which is available at
@@ -12,7 +13,7 @@
  *     Microsoft         - Initial version
  *     Frédéric Desbiens - 2024 version.
  */
-
+// Portions of this file were generated with AI assistance.
 #include "sntp_client.h"
 
 #include <stdbool.h>
@@ -47,6 +48,9 @@ static TX_EVENT_FLAGS_GROUP sntp_flags;
 // Variables to keep track of time
 static ULONG sntp_last_time = 0;
 static ULONG tx_last_ticks  = 0;
+static uint64_t sntp_epoch_ms;
+static uint64_t sntp_elapsed_ticks;
+static ULONG sntp_ms_last_tick;
 
 static VOID time_update_callback(NX_SNTP_TIME_MESSAGE* time_update_ptr, NX_SNTP_TIME* local_time)
 {
@@ -54,28 +58,35 @@ static VOID time_update_callback(NX_SNTP_TIME_MESSAGE* time_update_ptr, NX_SNTP_
     tx_event_flags_set(&sntp_flags, SNTP_UPDATE_EVENT, TX_OR);
 }
 
-static void set_sntp_time()
+static UINT set_sntp_time()
 {
     UINT status;
     ULONG seconds;
-    ULONG milliseconds;
+    ULONG fraction;
+    TX_INTERRUPT_SAVE_AREA
     CHAR time_buffer[64];
 
-    status = nx_sntp_client_get_local_time(&sntp_client, &seconds, &milliseconds, NX_NULL);
+    status = nx_sntp_client_get_local_time(&sntp_client, &seconds, &fraction, NX_NULL);
     if (status != NX_SUCCESS)
     {
         printf("ERROR: Internal error with getting local time (0x%08x)\n", status);
-        return;
+        return status;
     }
 
     // Stash the Unix and ThreadX times
     sntp_last_time = seconds - UNIX_TO_NTP_EPOCH_SECS;
     tx_last_ticks  = tx_time_get();
+    TX_DISABLE
+    sntp_epoch_ms = (uint64_t)sntp_last_time * 1000u + (((uint64_t)fraction * 1000u) >> 32);
+    sntp_elapsed_ticks = 0;
+    sntp_ms_last_tick = tx_last_ticks;
+    TX_RESTORE
 
     nx_sntp_client_utility_display_date_time(&sntp_client, time_buffer, sizeof(time_buffer));
 
     printf("\tSNTP time update: %s\r\n", time_buffer);
     printf("SUCCESS: SNTP initialized\r\n");
+    return NX_SUCCESS;
 }
 
 static UINT sntp_client_run()
@@ -83,7 +94,7 @@ static UINT sntp_client_run()
     UINT status;
     NXD_ADDRESS sntp_address;
 
-    if (sntp_server_count > (sizeof(SNTP_SERVER) / sizeof(&SNTP_SERVER)))
+    if (sntp_server_count >= (sizeof(SNTP_SERVER) / sizeof(SNTP_SERVER[0])))
     {
         // We rotated through all the servers, fail out.
         return NX_SNTP_SERVER_NOT_AVAILABLE;
@@ -131,6 +142,22 @@ ULONG sntp_time_get()
     ULONG sntp_time = sntp_last_time + tx_time_delta;
 
     return sntp_time;
+}
+
+/* Read/advance the millisecond clock atomically on this single-core board.
+ * Frequent calls retain sub-millisecond ticks instead of rounding each delta. */
+uint64_t sntp_time_get_ms(void)
+{
+    ULONG current;
+    uint64_t result;
+    TX_INTERRUPT_SAVE_AREA
+    TX_DISABLE
+    current = tx_time_get();
+    sntp_elapsed_ticks += (ULONG)(current - sntp_ms_last_tick);
+    sntp_ms_last_tick = current;
+    result = sntp_epoch_ms ? sntp_epoch_ms + sntp_elapsed_ticks * 1000u / TX_TIMER_TICKS_PER_SECOND : 0;
+    TX_RESTORE
+    return result;
 }
 
 UINT sntp_time(ULONG* unix_time)
@@ -185,7 +212,15 @@ UINT sntp_sync()
     while (NX_TRUE)
     {
         // Run the client
-        sntp_client_run();
+        status = sntp_client_run();
+        if (status != NX_SUCCESS)
+        {
+            if (sntp_server_count >= sizeof(SNTP_SERVER) / sizeof(SNTP_SERVER[0]))
+            {
+                break;
+            }
+            continue;
+        }
 
         // Wait for new events
         events = 0;
@@ -197,11 +232,15 @@ UINT sntp_sync()
             nx_sntp_client_receiving_updates(&sntp_client, &server_status);
 
             // New time, update our local time and we are done
-            set_sntp_time();
-            status = NX_SUCCESS;
+            status = set_sntp_time();
             break;
         }
 
+        if (sntp_server_count >= sizeof(SNTP_SERVER) / sizeof(SNTP_SERVER[0]))
+        {
+            status = NX_SNTP_SERVER_NOT_AVAILABLE;
+            break;
+        }
         // Otherwise we rotate around to the next server
     }
 

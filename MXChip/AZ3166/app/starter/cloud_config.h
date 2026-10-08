@@ -28,8 +28,8 @@ typedef enum
 // WiFi connection config
 // ----------------------------------------------------------------------------
 #define HOSTNAME      "eclipse-threadx"  //Change to unique hostname.
-#define WIFI_SSID     ""
-#define WIFI_PASSWORD "" 
+#define WIFI_SSID     "SDVTeam1"
+#define WIFI_PASSWORD "SDVTeam1-123456" 
 #define WIFI_MODE     WPA2_PSK_AES
 
 // ----------------------------------------------------------------------------

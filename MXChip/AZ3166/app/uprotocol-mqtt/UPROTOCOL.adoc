@@ -1,0 +1,107 @@
+= AZ3166 uProtocol MQTT demo
+
+The `uprotocol-mqtt` application uses the NetX Duo uProtocol addon at up-spec commit
+`3130bc5bfe661f60509b9d5e1d03995d608a18b2`, over MQTT 5 with E2E topic mapping.
+The implementation was prepared with Codex (GPT-6); human review is required before submission.
+
+== Build and deploy
+
+The AZ3166 NetX Duo submodule is pinned to the uProtocol fork commit `0edae5f`.
+Initialize it with `git submodule update --init MXChip/AZ3166/deps/lib/netxduo`.
+From the SampleX repository root:
+
+[source,sh]
+----
+MXChip/AZ3166/scripts/build.sh uprotocol-mqtt rebuild
+----
+
+Deploy with `sudo MXChip/AZ3166/scripts/deploy.sh /mnt/AZ3166` after mounting
+the board. See `README-UPROTOCOL.md` for both app configurations and deployment.
+Use a clean build when switching from an older NetX Duo checkout because the MQTT client control block changed.
+
+== Configuration and peer contract
+
+Wi-Fi and broker address/port are in `app/uprotocol-mqtt/cloud_config.h`.
+The demo uses plain TCP and the existing no-authentication broker configuration.
+It requires a reachable MQTT 5 broker and successful SNTP synchronization.
+
+uProtocol settings are in `app/uprotocol-mqtt/uprotocol_config.h`:
+
+[cols="2,3,3"]
+|===
+|Purpose |uProtocol URI |MQTT topic
+|Local identity |`up://az3166/AB/1/0` |Not a publication
+|Telemetry source |`up://az3166/AB/1/8001` |`az3166/AB/0/1/8001`
+|Powertrain mode source |`up://powertrain/BC/1/8001` |`powertrain/BC/0/1/8001`
+|===
+
+These are demo identifiers, not assigned production service IDs.
+Coordinate changes with the peer and keep the telemetry source's authority/entity/version equal to the local identity.
+The old raw MQTT topic macros are no longer used by this demo.
+Telemetry JSON and the display's JSON `Mode` field are unchanged, with uProtocol payload format JSON (3).
+Raw JSON on the old `vehicle/powertrain/mode` topic will not update the display.
+The publisher must include uProtocol attributes as MQTT 5 properties.
+
+To publish a test event using installed Python and `mosquitto_pub`:
+
+[source,sh]
+----
+python3 MXChip/AZ3166/scripts/publish_uprotocol_powertrain.py \
+  --host BROKER_IP --mode Sport
+----
+
+`--dry-run` prints the command without connecting. `--authority`, `--entity`,
+`--version` and `--resource` allow the helper to follow changed demo identities;
+numeric URI fields are hexadecimal.
+The helper generates a fresh UUIDv7, includes the uProtocol MQTT properties and publishes non-retained JSON with QoS 1 and a 10-second TTL.
+It does not introduce a firmware dependency.
+
+== Runtime
+
+Network startup initializes Wi-Fi, DHCP, DNS and SNTP before the transport starts.
+The SNTP adapter preserves the fractional timestamp and advances Unix milliseconds
+using ThreadX ticks, including tick-counter rollover while called regularly.
+Startup stops on time-sync failure instead of sending invalid wall-clock timestamps.
+The STM32 HAL RNG supplies fresh UUID entropy; RNG errors prevent publication.
+
+The MQTT thread waits at most 100 ms between processing passes when idle.
+Each pass drains up to four messages and services reconnect deadlines.
+The addon restores the registered listener after session loss.
+Telemetry events coalesce while disconnected, so reconnect publishes current sensor data.
+A failed publication is reported; the next telemetry event creates a fresh message.
+The display callback keeps the original I2C mutex and parses bounded JSON payloads.
+
+Large transport/message buffers are static. The application MQTT stack is 8 KiB;
+the internal MQTT stack remains 5 KiB. The maximum MQTT packet is 2048 bytes and
+the application receive buffer is 512 bytes. Oversized input is discarded with
+an explicit error by the addon. Confirm stack high-water marks and packet-pool
+capacity on the physical board under expected traffic.
+
+The code contains no additional worker thread and uses no new firmware library dependency.
+Cross-compilation is not evidence of board execution; validate Wi-Fi/SNTP/RNG,
+telemetry reception, display updates, stale/malformed message rejection and broker
+restart/reconnection on the board before presenting this as hardware-verified.
+
+== Validation
+
+The MQTT firmware has cross-compiled with Arm GNU 13.3.1. The linker reported
+the existing RWX load-segment warning (the original demo ELF has the same
+segment permissions), plus serial LTO notices. The uProtocol build has reached
+DHCP and DNS on the physical board; end-to-end MQTT 5/uProtocol traffic still
+needs confirmation.
+
+Host tests check SNTP fractional conversion, frequent clock reads, 32-bit tick
+rollover and resynchronization, plus the test publisher's URI/UUID/JSON/MQTT properties.
+On Linux with GCC multilib, CMake, Ninja and Python available:
+
+[source,sh]
+----
+cmake -S MXChip/AZ3166/tests/uprotocol -B MXChip/AZ3166/build-uprotocol/host-tests -G Ninja
+cmake --build MXChip/AZ3166/build-uprotocol/host-tests
+ctest --test-dir MXChip/AZ3166/build-uprotocol/host-tests --output-on-failure
+----
+
+The clock test compiles the actual SNTP source, replacing only time, interrupt
+control and SNTP timestamp access; it does not simulate networking or the board RNG.
+The publisher properties were also accepted by the production uProtocol decoder
+in a separate host check.

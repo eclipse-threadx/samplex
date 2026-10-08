@@ -1,5 +1,6 @@
 #  Copyright (c) Microsoft
 #  Copyright (c) 2024 Eclipse Foundation
+#  Copyright (c) 2026 Eclipse ThreadX contributors
 # 
 #  This program and the accompanying materials are made available 
 #  under the terms of the MIT license which is available at
@@ -10,6 +11,7 @@
 #  Contributors: 
 #     Microsoft         - Initial version
 #     Frédéric Desbiens - 2024 version.
+# Portions of this file were generated with AI assistance.
 
 # Define ThreadX user configuration
 set(TX_USER_FILE "${CMAKE_CURRENT_LIST_DIR}/threadx/tx_user.h" CACHE STRING "Enable TX user configuration")
@@ -20,6 +22,9 @@ set(NXD_ENABLE_FILE_SERVERS OFF CACHE BOOL "Disable fileX dependency by netxduo"
 
 # Core libraries
 add_subdirectory(${SHARED_LIB_DIR}/threadx threadx)
+if(APP_CONFIG STREQUAL "uprotocol-mqtt" AND NOT EXISTS "${SHARED_LIB_DIR}/netxduo/addons/uprotocol/nxd_uprotocol.h")
+    message(FATAL_ERROR "The uProtocol MQTT demo requires the pinned NetX Duo submodule. Run git submodule update --init MXChip/AZ3166/deps/lib/netxduo")
+endif()
 add_subdirectory(${SHARED_LIB_DIR}/netxduo netxduo)
 add_subdirectory(${SHARED_LIB_DIR}/jsmn jsmn)
 add_subdirectory(${SHARED_LIB_DIR}/nanoprintf nanoprintf)

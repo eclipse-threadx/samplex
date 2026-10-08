@@ -112,7 +112,7 @@ winget install --id=Kitware.CMake  -e
 To compile the application, use the provided scripts in the `MXChip/AZ3166/scripts` folder.
 
 ### Windows (PowerShell)
-You can build the application using `build.ps1`. It accepts a `-Config` parameter to select the application version (`starter`, `arcade`, `telemetry`, or `mqtt`).
+You can build the application using `build.ps1`. It accepts a `-Config` parameter to select the application version (`starter`, `arcade`, `telemetry`, `mqtt`, or `uprotocol-mqtt`).
 ```powershell
 .\scripts\build.ps1 -Config starter
 ```
@@ -176,7 +176,8 @@ The application supports multiple configurations that you can select at build ti
 
 - `starter`: Initiates the board and WiFi connectivity.
 - `telemetry`: Adds code to read the on-board sensors and print the output.
-- `mqtt`: Adds code to publish the telemetry over MQTT. Also creates a second thread subscribing to an MQTT topic; the received messages will be printed. (Note: This configuration builds upon `telemetry`).
+- `mqtt`: The original upstream MQTT telemetry demo.
+- `uprotocol-mqtt`: Publishes telemetry and receives powertrain events using uProtocol over MQTT 5. See [README-UPROTOCOL.md](MXChip/AZ3166/app/uprotocol-mqtt/README-UPROTOCOL.md) for setup and deployment.
 - `arcade`: A collection of arcade games. Thanks to Sébastien Heurtematte for this contribution!
 
 

@@ -1,6 +1,7 @@
 /* 
  * Copyright (c) Microsoft
  * Copyright (c) 2024 Eclipse Foundation
+ * Copyright (c) 2026 Eclipse ThreadX contributors
  * 
  *  This program and the accompanying materials are made available 
  *  under the terms of the MIT license which is available at
@@ -12,12 +13,13 @@
  *     Microsoft         - Initial version
  *     Frédéric Desbiens - 2024 version.
  */
+// Portions of this file were generated with AI assistance.
 
 #ifndef NX_USER_H
 #define NX_USER_H
 
 #define NX_SECURE_ENABLE
-#define NX_ENABLE_EXTENDED_NOTIFY_SUPPORT
+/* Keep NX_IP layout compatible with the prebuilt WICED NetX driver. */
 #define NX_ENABLE_IP_PACKET_FILTER
 #define NX_DISABLE_IPV6
 #define NX_DNS_CLIENT_USER_CREATE_PACKET_POOL

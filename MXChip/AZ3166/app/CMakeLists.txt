@@ -63,6 +63,18 @@ elseif(APP_CONFIG STREQUAL "mqtt")
         ${CONFIG_DIR}/main.c
         ${CONFIG_DIR}/cloud_config.h
     )
+elseif(APP_CONFIG STREQUAL "uprotocol-mqtt")
+    # uProtocol over MQTT 5, with the powertrain display demo.
+    list(APPEND SOURCES
+        ${COMMON_DIR}/board_init.c
+        ${COMMON_DIR}/screen.c
+        ${CONFIG_DIR}/telemetry.c
+        ${CONFIG_DIR}/mqtt_client.c
+        ${CONFIG_DIR}/powertrain_display.c
+        ${CONFIG_DIR}/main.c
+        ${CONFIG_DIR}/cloud_config.h
+        ${CONFIG_DIR}/uprotocol_config.h
+    )
 else() # starter
     list(APPEND SOURCES
         ${COMMON_DIR}/board_init.c
@@ -92,7 +104,7 @@ target_include_directories(${PROJECT_NAME}
         ${CONFIG_DIR}
 )
 
-if(APP_CONFIG STREQUAL "mqtt")
+if(APP_CONFIG STREQUAL "mqtt" OR APP_CONFIG STREQUAL "uprotocol-mqtt")
     # Also include telemetry directory for MQTT
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/telemetry)
 endif()
